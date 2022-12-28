@@ -18,6 +18,9 @@ class Connection {
         }
         
     }
+    getConnection() {
+        return this.dbConnection;
+    }
 }
 
-module.exports = Connection
+module.exports = Connection 

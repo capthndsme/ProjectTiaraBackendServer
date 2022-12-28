@@ -24,10 +24,11 @@ module.exports = function(dbConnection) {
         PRIMARY KEY (\`DeviceID\`),
         FOREIGN KEY (\`AccountOwnerID\`) REFERENCES Accounts(\`AccountID\`)
     );`
-    console.log("[Debug] Creating tables...")
+    let before = performance.now()
+    console.log("[Debug] Creating tables if doesn't exist...")
     dbConnection.query(AccountsTable);
     dbConnection.query(SessionsTable);
     dbConnection.query(DevicesTable);
-    console.log("[Debug] Tables created")
+    console.log("[Debug] Tables created, %sms", (performance.now() - before).toFixed(2))
     
 }

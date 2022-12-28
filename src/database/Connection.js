@@ -10,8 +10,9 @@ class Connection {
     }
     initialise() {
         try {
-            this.dbConnection = mysql.createConnection(this.dbConf)
-            console.log(`[Debug] Initialised MySQL connection: ${this.dbConf.database}`)
+            this.dbConnection = mysql.createPool(this.dbConf)
+            
+            console.log(`[Debug] Initialised MySQL pool: ${this.dbConf.database}`)
             CreateTables(this.dbConnection)
         } catch(e) {
             console.error(`[Error] Fatal error: MySQL connection cannot be established.`, e)

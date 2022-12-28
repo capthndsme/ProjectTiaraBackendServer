@@ -11,7 +11,8 @@ module.exports = function(dbConnection) {
     const SessionsTable = `CREATE TABLE IF NOT EXISTS \`Sessions\` (
         \`SessionID\` INT NOT NULL AUTO_INCREMENT,
         \`AccountID\` INT NOT NULL,
-        \`Session\` BINARY(32) NOT NULL,
+        \`Username\` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`Session\` CHAR(64) NOT NULL,
         \`IPAddress\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         PRIMARY KEY (\`SessionID\`),
         FOREIGN KEY (\`AccountID\`) REFERENCES Accounts(\`AccountID\`)

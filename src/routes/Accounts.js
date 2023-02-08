@@ -1,5 +1,6 @@
 const CheckAccountExists = require("../dbops/CheckAccountExists");
 const CheckPassword = require("../dbops/CheckPassword");
+const CheckSession = require("../dbops/CheckSession");
 const CreateAccount = require("../dbops/CreateAccount");
 const CreateSession = require("../dbops/CreateSession");
 const { createPasswordHash } = require("../shared/LoginVerification");
@@ -10,6 +11,35 @@ module.exports = function (app, dbi) {
     dbInstance = dbi;
     app.post("/accounts/register", RegisterAccount)
     app.post("/accounts/login", LoginAccount)
+    app.post("/accounts/verifyToken", VerifyToken)
+}
+
+function VerifyToken(req, res) {
+    let json = req.body;
+    if (json &&
+        json.username &&
+        json.session
+    ) {
+        CheckSession(json.username, json.session, dbInstance)
+        .then((checkResult) => {
+            if (checkResult) {
+                res.send({
+                    "state": "success"
+                });
+            } else {
+                res.send({
+                    "state": "error"
+                });
+            }
+        })
+        .catch((e) => {
+            console.error("[Error DatabaseLayer]", e)
+            res.status(500).send({
+                "state": "error",
+                "error": "Database Error"
+            });
+        })
+    }
 }
 
 function LoginAccount(req, res) {

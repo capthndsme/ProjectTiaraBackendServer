@@ -5,7 +5,7 @@ module.exports = function (Username, Password, dbConnection) {
         dbConnection.promise().execute("SELECT * FROM Accounts WHERE Username = ?", [Username])
             .then(([rows, fields]) => {
                 if (rows.length === 0) {
-                    resolve({success: false});
+                    resolve({status: false});
                 } else {
                     const pass = rows[0].Password;
                     verifyPassword(Password, pass.toString()).then((passwordVerifyStatus) => {

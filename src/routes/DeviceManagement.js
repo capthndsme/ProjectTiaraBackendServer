@@ -30,7 +30,7 @@ module.exports = function (app, dbi, wsh, devMgr) {
 }
 
 
-
+ 
 function toggleDevice(req, res) {
     let json = req.body
     if (json &&
@@ -151,6 +151,7 @@ function getDeviceState(req, res) {
                                     device: deviceManager.findDeviceByHwid(req.params.hwid),
                                     "type": data.type
                                 })
+                             
                             } else {
                                 res.status(403).send({
                                     "status": "error",

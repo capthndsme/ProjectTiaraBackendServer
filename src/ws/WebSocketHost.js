@@ -5,7 +5,8 @@ let _io;
 let _devices = [];
 
 fns = {
-    sendMessageToHardwareAndWaitAcknowledgeWithPromise: sendMessageToHardwareAndWaitAcknowledgeWithPromise
+    sendMessageToHardwareAndWaitAcknowledgeWithPromise: sendMessageToHardwareAndWaitAcknowledgeWithPromise,
+    sendMessageToHardware: sendMessageToHardware
 }
  
 
@@ -15,7 +16,7 @@ function sendMessageToHardwareAndWaitAcknowledgeWithPromise(hwid, eventType, dat
         if (dev) {
             CreateSessionHash(12).then((generatedEvHash) => {
                 const emitData = { data: dataSend, evHash: generatedEvHash }
-                console.log("emit event", eventType, emitData);
+                console.log("[WebSocketHost] Emitted acknowledge-required event", eventType, emitData);
                 dev.emit(eventType, emitData);
                 let cancelTimeout = setTimeout(() => {
                     removeWaitCallback(generatedEvHash);
@@ -27,6 +28,23 @@ function sendMessageToHardwareAndWaitAcknowledgeWithPromise(hwid, eventType, dat
                     clearTimeout(cancelTimeout);
                     removeWaitCallback(generatedEvHash)
                 }, generatedEvHash);
+
+            })
+        } else {
+            resolve(false)
+        }
+    })
+}
+
+function sendMessageToHardware(hwid, eventType, dataSend) {
+    return new Promise((resolve) => {
+        let dev = _devices[hwid]
+        if (dev) {
+            CreateSessionHash(12).then((generatedEvHash) => {
+                const emitData = { data: dataSend, evHash: generatedEvHash }
+                console.log("[WebSocketHost] Emitted acknowledge-less event", eventType, emitData);
+                dev.emit(eventType, emitData);
+                resolve(true);
 
             })
         } else {

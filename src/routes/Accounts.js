@@ -6,9 +6,11 @@ const CreateSession = require("../dbops/CreateSession");
 const { createPasswordHash } = require("../shared/LoginVerification");
  
 
-let dbInstance;
-module.exports = function (app, dbi) {
+let dbInstance, deviceManager, eventBus;
+module.exports = function (app, dbi, devMgr, evBus) {
     dbInstance = dbi;
+    deviceManager = devMgr;
+    evBus = evBus;
     app.post("/accounts/register", RegisterAccount)
     app.post("/accounts/login", LoginAccount)
     app.post("/accounts/verifyToken", VerifyToken)

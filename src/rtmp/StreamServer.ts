@@ -1,5 +1,5 @@
-const NodeMediaServer = require('node-media-server');
-const CheckDeviceSessionValidity = require("../dbops/CheckDeviceSessionValidity");
+import NodeMediaServer from "node-media-server";
+
 const STREAMER_CONFIG = {
    rtmp: {
       port: 1935,
@@ -35,14 +35,12 @@ const STREAMER_CONFIG = {
       ]
    }
 };
-// Not the best code I wrote. LMAO.
-// Apologies in advance for this abomination
-let eventBus, databaseLayer, nms;
+
 let HardwareToStreamMap = [];
 module.exports = function (eb, dl) {
    eventBus = eb;
    databaseLayer = dl;
-   nms = new NodeMediaServer(STREAMER_CONFIG);
+   let nms: NodeMediaServer = new NodeMediaServer(STREAMER_CONFIG);
    nms.run();
    eventBus.on("StreamingDisconnect", (hwid) => {
       console.log("[StreamServer] StreamingDisconnect received for hardware ID", hwid)

@@ -1,4 +1,4 @@
-module.exports = function(dbConnection) {
+export function CreateTables (dbConnection) {
     const AccountsTable = `CREATE TABLE IF NOT EXISTS \`Accounts\` (
         \`AccountID\` INT NOT NULL AUTO_INCREMENT,
         \`Email\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,

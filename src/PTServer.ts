@@ -4,7 +4,7 @@ const express = require('express');
 const DeviceManager = require("./devices/DeviceManager")
 const config = require("../config");
 const Connection = require("./database/Connection")
-const {Server} = require("socket.io")
+import Server from "socket.io";
 const WebSocketHost = require("./ws/WebSocketHost");
 const cors = require("cors");
 const StreamServer = require("./rtmp/StreamServer");

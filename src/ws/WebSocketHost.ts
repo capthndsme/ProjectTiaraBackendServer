@@ -6,85 +6,8 @@ const GetOwnedDevices = require("../dbops/GetOwnedDevices");
 const CheckPassword = require("../dbops/CheckPassword");
 const CreateSession = require("../dbops/CreateSession");
 let _io;
-let _devices = [];
-
-fns = {
-    sendMessageToHardwareAndWaitAcknowledgeWithPromise: sendMessageToHardwareAndWaitAcknowledgeWithPromise,
-    sendMessageToHardware: sendMessageToHardware
-}
 
 
-function sendMessageToHardwareAndWaitAcknowledgeWithPromise(hwid, eventType, dataSend) {
-    return new Promise((resolve) => {
-        let dev = _devices[hwid]
-        if (dev) {
-            CreateSessionHash(12).then((generatedEvHash) => {
-                const emitData = { data: dataSend, evHash: generatedEvHash }
-                console.log("[WebSocketHost] Emitted acknowledge-required event", eventType, emitData);
-                dev.emit(eventType, emitData);
-                let cancelTimeout = setTimeout(() => {
-                    removeWaitCallback(generatedEvHash);
-                    resolve(false);
-                    console.warn("WAITING FOR ACKNOWLEDGE TIMED-OUT")
-                }, 30000)
-                createWaitCallback(() => {
-                    resolve(true);
-                    clearTimeout(cancelTimeout);
-                    removeWaitCallback(generatedEvHash)
-                }, generatedEvHash);
-
-            })
-        } else {
-            resolve(false)
-        }
-    })
-}
-
-function sendMessageToHardware(hwid, eventType, dataSend) {
-    return new Promise((resolve) => {
-        let dev = _devices[hwid]
-        if (dev) {
-            CreateSessionHash(12).then((generatedEvHash) => {
-                const emitData = { data: dataSend, evHash: generatedEvHash }
-                console.log("[WebSocketHost] Emitted acknowledge-less event", eventType, emitData);
-                dev.emit(eventType, emitData);
-                resolve(true);
-
-            })
-        } else {
-            resolve(false)
-        }
-    })
-}
-
-let _waitCallbacks = [];
-function createWaitCallback(fn, evID) {
-    let funct = _waitCallbacks.push({
-        functionCall: fn,
-        evID: evID
-    })
-}
-
-
-
-function findWaitCallback(evID) {
-    return _waitCallbacks.find(function (obj) {
-        return obj.evID === evID;
-    });
-}
-function removeWaitCallback(evID) {
-    delete findWaitCallback(evID);
-
-}
-function findAndExecuteWaitCallback(evID) {
-    let cb = findWaitCallback(evID);
-    if (cb) {
-        cb.functionCall();
-
-    } else {
-        console.log("Callback ID %s not found", evID)
-    }
-}
 let clientSockets = [];
 let deviceSockets = [];
 module.exports = function (server, database, deviceManager) {

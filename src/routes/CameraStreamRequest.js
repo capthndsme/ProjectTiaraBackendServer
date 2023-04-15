@@ -30,7 +30,7 @@ function cameraStreamingConnection(req, res) {
                                                         "streamID": cameraStream
                                                     })
                                                 })
-                                                .catch(e=> {
+                                                .catch(e => {
                                                     res.send({
                                                         "status": "error",
                                                         "error": "DEVICE_NOSYNC"

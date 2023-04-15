@@ -1,6 +1,8 @@
-const CreateSessionHash = require('../shared/CreateSessionHash')
+import { getConnection } from "../database/Connection";
+let dbConnection = getConnection();
+import { CreateSessionHash } from "../shared/CreateSessionHash";
 
-module.exports = function (accountId, username, IP, dbConnection) {
+function CreateSession (accountId: string, username: string, IP: string): Promise<string> {
     return new Promise((resolve, reject) => {
         CreateSessionHash().then((hash) => {
             dbConnection.promise().execute(

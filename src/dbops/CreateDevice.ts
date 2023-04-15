@@ -1,6 +1,8 @@
-const CreateSessionHash = require('../shared/CreateSessionHash')
+import { getConnection } from "../database/Connection";
+let dbConnection = getConnection();
+import {CreateSessionHash} from "../shared/CreateSessionHash"
 
-module.exports = function (ownerId, deviceHwid, deviceName, deviceDescription, dbConnection) {
+export function CreateDevice (ownerId: number, deviceHwid: string, deviceName: string, deviceDescription: string): Promise<{hash: string, deviceId: number}> {
     return new Promise((resolve, reject) => {
         CreateSessionHash().then((hash) => {
             dbConnection.promise().execute(
@@ -9,7 +11,7 @@ module.exports = function (ownerId, deviceHwid, deviceName, deviceDescription, d
             ).then((insert) => {
                 resolve({
                     hash: hash, 
-                    deviceId: insert[0].insertId
+                    deviceId: insert[0]["insertId"]
                 })
             }).catch((e) =>{
                 reject(e);

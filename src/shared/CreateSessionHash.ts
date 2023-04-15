@@ -1,9 +1,9 @@
-const crypto = require("node:crypto")
+import crypto from "node:crypto"
 
-module.exports = function (len=32) {
-
+export function CreateSessionHash (len: number = 32): Promise<string> {
     return new Promise((resolve, reject) => {
         crypto.randomBytes(len, (err, buf) => {
+            if (err) reject(err);
             resolve(buf.toString('hex'));
         })
     });

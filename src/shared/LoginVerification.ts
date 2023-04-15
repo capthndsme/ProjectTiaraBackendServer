@@ -1,18 +1,15 @@
-const bcrypt = require('bcrypt');
+import bcrypt from "bcrypt";
 
-module.exports.createPasswordHash = function(password, callback) {
-    return new Promise((resolve, reject) => {
-        bcrypt.genSalt(11)
-        .then((salt) => {
-            bcrypt.hash(password, salt)
-            .then((hash) => resolve(hash))
-        })
-    })
+export function createPasswordHash(password:string): Promise<string> {
+	return new Promise((resolve) => {
+		bcrypt.genSalt(11).then((salt) => {
+			bcrypt.hash(password, salt).then((hash) => resolve(hash));
+		});
+	});
 }
 
-module.exports.verifyPassword = function(password, hashedPassword) {
-    return new Promise((resolve, reject) => {
-        bcrypt.compare(password, hashedPassword)
-        .then((result) => resolve(result))
-    })
+export function verifyPassword(password: string, hashedPassword:string): Promise<boolean> {
+	return new Promise((resolve) => {
+		bcrypt.compare(password, hashedPassword).then((result) => resolve(result));
+	});
 }

@@ -1,4 +1,7 @@
-module.exports = function (timestamp, metricType, metricvalue, deviceId, dbConnection) {
+import { getConnection } from "../database/Connection";
+let dbConnection = getConnection();
+
+export function WriteMetric (timestamp: number, metricType: string, metricvalue: string | number, deviceId: number) {
     return new Promise((resolve, reject) => {
         dbConnection.promise().execute(
             "INSERT INTO DeviceMetrics(Timestamp, MetricType, DeviceID, MetricValue) Values (?, ?, ?, ?)",

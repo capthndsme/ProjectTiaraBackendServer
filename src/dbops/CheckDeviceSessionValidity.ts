@@ -1,6 +1,6 @@
 import { getConnection } from "../database/Connection";
 let dbConnection = getConnection();
-module.exports = function (DeviceHWID: string, DeviceToken: string, noReject: boolean = false): Promise<{ success: boolean, deviceId?: number }> {
+export function CheckDeviceSessionValidity (DeviceHWID: string, DeviceToken: string, noReject: boolean = false): Promise<{ success: boolean, deviceId?: number }> {
 	return new Promise((resolve, reject) => {
 		if (DeviceHWID && DeviceToken) {
 			dbConnection

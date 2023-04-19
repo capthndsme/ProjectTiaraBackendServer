@@ -1,4 +1,5 @@
-export function CreateTables (dbConnection) {
+import mysql from 'mysql2'
+export function CreateTables (dbConnection: mysql.Pool) {
     const AccountsTable = `CREATE TABLE IF NOT EXISTS \`Accounts\` (
         \`AccountID\` INT NOT NULL AUTO_INCREMENT,
         \`Email\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -43,13 +44,40 @@ export function CreateTables (dbConnection) {
         PRIMARY KEY (\`MetricID\`),
         FOREIGN KEY (\`DeviceID\`) REFERENCES Devices(\`DeviceID\`)
     );`
+
+    const PTNotifications = `CREATE TABLE IF NOT EXISTS \`PT_Notification_Table\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+        \`timestamp\` BIGINT NOT NULL,
+        \`notification_type\` VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+        \`notification_title\` VARCHAR(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`notification_content\` VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        PRIMARY KEY (\`id\`)
+     );`
+     const PTWebPush = `CREATE TABLE IF NOT EXISTS \`PT_WebPush\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+        \`hwid\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`notification_url\` VARCHAR(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        PRIMARY KEY (\`id\`)
+     );`
+
+     // This table is used to store persistent data for devices
+     // A simple key-value store would've been enough, but here we are using a table...
+     const PTPersists = `CREATE TABLE IF NOT EXISTS \`PT_Persistent_Data\` (
+        \`hwid\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`stateCache\` VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        PRIMARY KEY (\`hwid\`)
+     );`
+
     let before = performance.now()
     console.log("[Debug] Creating tables if doesn't exist...")
-    dbConnection.query(AccountsTable);
+    dbConnection.query(AccountsTable)
     dbConnection.query(SessionsTable);
     dbConnection.query(DevicesTable);
     dbConnection.query(DeviceSubAccessTable);
-    dbConnection.query(MetricsTable);
+    dbConnection.query(MetricsTable)
+    dbConnection.query(PTNotifications);
+    dbConnection.query(PTWebPush);
+    dbConnection.query(PTPersists);
     console.log("[Debug] Tables created, %sms", (performance.now() - before).toFixed(2))
     
 }

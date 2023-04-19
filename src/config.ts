@@ -19,7 +19,7 @@ export const dbConfig: dbConfig = {
 type appConfig = {
     port: number,
 }
-export const app: appConfig = {
+export const appConfig: appConfig = {
     port: 8080
 }
 

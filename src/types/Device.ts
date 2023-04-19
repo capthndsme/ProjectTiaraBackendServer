@@ -3,4 +3,5 @@ export type Device = {
    DeviceHWID: string;
    DeviceID: number;
    DeviceName: string;
+   AccessType?: string;
 }

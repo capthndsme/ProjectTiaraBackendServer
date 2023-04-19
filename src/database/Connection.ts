@@ -7,6 +7,7 @@ console.log("Database Connection file loaded")
 
 let dbConnection: mysql.Pool; 
 export function initialise() {
+    console.log("[PTServer Database] Initialising database connection")
     try {
         dbConnection = mysql.createPool(dbConfig)
         console.log(`[Debug] Initialised MySQL pool: ${dbConfig.database}`)
@@ -18,5 +19,10 @@ export function initialise() {
 
 
 export function getConnection(): mysql.Pool {
+    if (!dbConnection) {
+        console.log("[PTServer Database] Attempted to get database connection before initialising, initialising now.");
+ 
+        initialise();
+    }
     return dbConnection;
 }

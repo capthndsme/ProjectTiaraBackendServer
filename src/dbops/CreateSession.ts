@@ -2,7 +2,7 @@ import { getConnection } from "../database/Connection";
 let dbConnection = getConnection();
 import { CreateSessionHash } from "../shared/CreateSessionHash";
 
-function CreateSession (accountId: string, username: string, IP: string): Promise<string> {
+export function CreateSession (accountId: number, username: string, IP: string): Promise<string> {
     return new Promise((resolve, reject) => {
         CreateSessionHash().then((hash) => {
             dbConnection.promise().execute(

@@ -2,6 +2,7 @@ import { LoadDeviceDetails } from "../dbops/LoadDeviceDetails";
 import { createStateCache, loadStateCache, saveStateCache } from "../dbops/Perists";
 import { Device } from "../types/Device";
 import { DeviceState } from "../types/DeviceState";
+import { findDeviceSocket } from "../ws/DeviceSocketList";
 
 let _devices: DeviceState[] = [];
 
@@ -17,6 +18,11 @@ export function getOrLoadDeviceState(deviceHwid: string): Promise<DeviceState | 
 			loadStateCache(deviceHwid)
 				.then((deviceState) => {
 					// This is not mutable.
+					// Device is in the cache.
+					// Lets check our DeviceSocketList if it is connected.
+					const deviceSocket = findDeviceSocket(deviceHwid);
+					// A simple ternary operator to check if the device is online.
+					deviceState.deviceIsOnline = deviceSocket ? true : false;
 					_devices.push(deviceState);
 					resolve(deviceState);
 				})
@@ -25,8 +31,8 @@ export function getOrLoadDeviceState(deviceHwid: string): Promise<DeviceState | 
 					resolve(undefined);
 				});
 		} else {
-         resolve(device);
-      }
+			resolve(device);
+		}
 	});
 }
 
@@ -35,7 +41,11 @@ export function deviceConnected(deviceHwid: string): Promise<void> {
 	return new Promise((resolve) => {
 		let deviceState = getDeviceState(deviceHwid);
 		if (deviceState) {
-			deviceState.deviceIsOnline = true;
+			// Device is in the cache.
+			// Lets check our DeviceSocketList if it is connected.
+			const deviceSocket = findDeviceSocket(deviceHwid);
+			// A simple ternary operator to check if the device is online.
+			deviceState.deviceIsOnline = deviceSocket ? true : false;
 			resolve();
 		} else {
 			// Device is not in the cache, either we can try to get it from the database or we can create a new one.

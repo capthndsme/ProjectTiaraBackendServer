@@ -150,6 +150,7 @@ export function markDeviceAsOffline(deviceHwid: string): void {
 	if (deviceState) {
 		deviceState.deviceIsOnline = false;
 	}
+	saveStateCache(deviceHwid, deviceState);
 }
 
 export function markDeviceAsOnline(deviceHwid: string): void {
@@ -158,4 +159,5 @@ export function markDeviceAsOnline(deviceHwid: string): void {
 		deviceState.deviceIsOnline = true;
 		deviceState.deviceLastUpdate = Date.now();
 	}
+	saveStateCache(deviceHwid, deviceState);
 }

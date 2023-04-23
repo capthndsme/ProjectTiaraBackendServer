@@ -183,9 +183,11 @@ export function ClientEvents(socket: Socket): void {
 		const local: DeviceBaseToggle = {
 			toggleName: data.toggleName,
 			toggleValue: data.toggleValue,
+			toggleType: null, // Not needed for live toggle updates
 			lastChanged: Date.now(),
 		};
- 
+		// A better idea might be introducing a new TypeScript type for updates
+		// which don't require all DeviceBaseToggle fields to be present.
 		sendToggleStateToClientExceptSelf(socket, socket.data.subscribedDeviceHwid, local); // We do not need to wait for other clients to ack.
 		// Uncomment this for debugging... (Sends the toggle state to the client that sent the toggle state)
 		//sendToggleStateToClient(socket.data.subscribedDeviceHwid, local)
@@ -205,6 +207,7 @@ export function ClientEvents(socket: Socket): void {
             const failed: DeviceBaseToggle = {
                toggleName: data.toggleName,
                toggleValue: !data.toggleValue, // Invert since failed.
+					toggleType: null, // We don't know the type of the toggle since it failed.
                lastChanged: Date.now(),
             };
             sendToggleStateToClientExceptSelf(socket, socket.data.subscribedDeviceHwid, failed);

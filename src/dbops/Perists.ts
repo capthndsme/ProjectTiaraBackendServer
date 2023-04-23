@@ -8,8 +8,13 @@ export function loadStateCache(DeviceHWID: string): Promise<DeviceState> {
 			.promise()
 			.query("SELECT stateCache FROM PT_Persistent_Data WHERE hwid = ?", [DeviceHWID])
 			.then(([rows, fields]) => {
-            
-				resolve(JSON.parse(rows[0]["stateCache"]) as DeviceState);
+            try {
+					resolve(JSON.parse(rows[0]["stateCache"]) as DeviceState);
+				} catch(e) {
+					console.log("LoadState failed (Invalid JSON?)", e);
+					reject(e);
+				}
+				
 			})
 			.catch((e) => {
 				console.log("LoadState failed", e);

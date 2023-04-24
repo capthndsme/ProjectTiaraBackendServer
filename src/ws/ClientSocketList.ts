@@ -16,7 +16,7 @@ export function findAuthenticatedClientSocket(clientSession: string): ClientSock
 }
 
 export function setClientSubscribedDeviceHwid(clientUsername: string, deviceHwid: string | undefined): boolean {
-   let clientSocket = findAuthenticatedClientSocket(clientUsername);
+   const clientSocket = findAuthenticatedClientSocket(clientUsername);
    if (clientSocket) {
       clientSocket.currentSubscribedDeviceHwid = deviceHwid;
       return true;
@@ -28,7 +28,7 @@ export function setClientSubscribedDeviceHwid(clientUsername: string, deviceHwid
 export function setClientSubscribedDeviceHwidSocket(cs: Socket, deviceHwid: string | undefined): boolean {
    
    // find our clientSocket in our local Array
-   let clientSocket = _clientSockets.find((c) => c.socket === cs);
+   const clientSocket = _clientSockets.find((c) => c.socket === cs);
    if (clientSocket) {
 
       clientSocket.currentSubscribedDeviceHwid = deviceHwid;

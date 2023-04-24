@@ -68,7 +68,7 @@ export function CreateTables (dbConnection: mysql.Pool) {
         PRIMARY KEY (\`hwid\`)
      );`
 
-    let before = performance.now()
+    const before = performance.now()
     console.log("[Debug] Creating tables if doesn't exist...")
     dbConnection.query(AccountsTable)
     dbConnection.query(SessionsTable);

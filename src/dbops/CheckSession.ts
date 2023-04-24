@@ -1,7 +1,7 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
-export function CheckSession(Username: string, Session: string, noReject: boolean = false): Promise<boolean> {
+export function CheckSession(Username: string, Session: string, noReject = false): Promise<boolean> {
 	return new Promise((resolve, reject) => {
 		dbConnection
 			.promise()

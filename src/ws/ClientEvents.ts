@@ -7,9 +7,7 @@ import { GetOwnedDevices } from "../dbops/GetOwnedDevices";
 import {
 	addToAuthenticatedClientSocketList,
 	removeAuthenticatedClientSocket,
-	sendToggleStateToClient,
 	sendToggleStateToClientExceptSelf,
-	setClientSubscribedDeviceHwid,
 	setClientSubscribedDeviceHwidSocket,
 } from "./ClientSocketList";
 import { getDeviceState, getOrLoadDeviceState, mutateState } from "../components/DeviceStateCache";

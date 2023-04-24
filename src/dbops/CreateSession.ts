@@ -1,5 +1,5 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 import { CreateSessionHash } from "../shared/CreateSessionHash";
 
 export function CreateSession (accountId: number, username: string, IP: string): Promise<string> {

@@ -1,6 +1,6 @@
 import { getConnection } from "../database/Connection";
 import { DeviceState } from "../types/DeviceState";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
 export function loadStateCache(DeviceHWID: string): Promise<DeviceState> {
 	return new Promise((resolve, reject) => {

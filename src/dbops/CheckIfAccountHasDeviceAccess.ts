@@ -1,5 +1,5 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
 export function CheckIfAccountHasDeviceAccess(AccountID: string, DeviceHWID: string): Promise<{ success: boolean, type?: string}> {
 	return new Promise((resolve) => {

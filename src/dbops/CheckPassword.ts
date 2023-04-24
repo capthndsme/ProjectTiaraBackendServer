@@ -1,6 +1,6 @@
 import { getConnection } from "../database/Connection";
 import { verifyPassword } from "../shared/LoginVerification";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
 export function CheckPassword (Username: string, Password: string): Promise<{ status: boolean, accountId?: number }> {
     return new Promise((resolve, reject) => {
@@ -10,7 +10,7 @@ export function CheckPassword (Username: string, Password: string): Promise<{ st
                     if (rows.length === 0) {
                         resolve({status: false});
                     } else {
-                        const pass = rows[0]["Password"];;
+                        const pass = rows[0]["Password"];
                         verifyPassword(Password, pass.toString()).then((passwordVerifyStatus) => {
                             if (passwordVerifyStatus) {
                                 resolve({

@@ -1,6 +1,6 @@
 import { getConnection } from "../database/Connection";
 import { Device } from "../types/Device";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 export function LoadDeviceDetails(hwid: string): Promise<{ success: boolean; device: Device }> {
 	return new Promise((resolve, reject) => {
 		// TODO: Implement get Owned deviecs for sub accounts

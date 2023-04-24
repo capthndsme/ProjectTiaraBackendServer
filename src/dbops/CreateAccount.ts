@@ -1,6 +1,6 @@
 import { getConnection } from "../database/Connection";
 import { Account } from "../types/Account";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
 // We dont know what mysql2's return type is, so we use any
 export function CreateAccount (account: Account): Promise<any> {

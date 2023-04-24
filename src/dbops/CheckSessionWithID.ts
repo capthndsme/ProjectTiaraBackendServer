@@ -1,7 +1,7 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 
-export function CheckSessionWithID (Username:string, Session:string, noReject:boolean = false): Promise<{ success: boolean, accountId?: number }> {
+export function CheckSessionWithID (Username:string, Session:string, noReject = false): Promise<{ success: boolean, accountId?: number }> {
     return new Promise((resolve, reject) => {
         dbConnection.promise().execute("SELECT * FROM Sessions WHERE Username = ? AND Session = ? ", [Username, Session])
             .then(([rows, fields]) => {

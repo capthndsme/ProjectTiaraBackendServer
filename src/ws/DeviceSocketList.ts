@@ -31,7 +31,7 @@ export function removeFromDeviceSocketList(socket: Socket) {
 // additionally, deviceStateUpdate is heavier since it sends the entire device state.
 // We should create partial updates for deviceToggles, deviceSensors, deviceLastUpdate.
 export function requestDeviceStateUpdate(deviceHwid: string) {
-	let deviceSocket = findDeviceSocket(deviceHwid);
+	const deviceSocket = findDeviceSocket(deviceHwid);
 	if (deviceSocket) {
 		deviceSocket.socket.emit("requestDeviceStateUpdate");
 	}
@@ -39,7 +39,7 @@ export function requestDeviceStateUpdate(deviceHwid: string) {
 
 export function getDeviceSchedulerData(deviceHwid: string): Promise<any> {
 	return new Promise((resolve, reject) => {
-		let deviceSocket = findDeviceSocket(deviceHwid);
+		const deviceSocket = findDeviceSocket(deviceHwid);
 		if (deviceSocket) {
 			deviceSocket.socket.timeout(12000).emit("getDeviceScheduler", {}, 
          (err: boolean, data: Array<ScheduledTask>) => {

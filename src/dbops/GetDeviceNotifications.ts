@@ -1,5 +1,5 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 export function GetDeviceNotifications(DeviceID: string) {
 	return new Promise((resolve) => {
 		if (DeviceID) {

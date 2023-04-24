@@ -44,7 +44,7 @@ const STREAMER_CONFIG = {
  
 
 export function startStreamingServer() {
-	let nms = new NodeMediaServer(STREAMER_CONFIG);
+	const nms = new NodeMediaServer(STREAMER_CONFIG);
 	nms.run();
 	SharedEventBus.on("StreamingDisconnect", (hwid) => {
 		console.log("[StreamServer] StreamingDisconnect received for hardware ID", hwid);
@@ -64,7 +64,7 @@ export function startStreamingServer() {
 					console.log(`[StreamServer Ingest Authenticator] Device ${deviceID} succeeded authentication.`);
 					addToDeviceStreamList(deviceID, id);
 				} else {
-					let session = nms.getSession(id);
+					const session = nms.getSession(id);
 					console.warn(
 						`[StreamServer Ingest Authenticator] Device did not pass authentication, rejecting stream for hwid ${deviceID}...`
 					);

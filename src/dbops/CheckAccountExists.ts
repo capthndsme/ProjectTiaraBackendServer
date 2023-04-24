@@ -1,5 +1,5 @@
 import { getConnection } from "../database/Connection";
-let dbConnection = getConnection();
+const dbConnection = getConnection();
 export function CheckAccountExists(Username: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
         dbConnection.promise().execute("SELECT * FROM Accounts WHERE Username = ?", [Username])

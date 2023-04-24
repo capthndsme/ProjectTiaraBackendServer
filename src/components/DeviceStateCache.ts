@@ -39,7 +39,7 @@ export function getOrLoadDeviceState(deviceHwid: string): Promise<DeviceState | 
 export function deviceConnected(deviceHwid: string): Promise<void> {
 	console.log("Device connected. Lets load the device state from the database.", deviceHwid);
 	return new Promise((resolve) => {
-		let deviceState = getDeviceState(deviceHwid);
+		const deviceState = getDeviceState(deviceHwid);
 		if (deviceState) {
 			// Device is in the cache.
 			// Lets check our DeviceSocketList if it is connected.
@@ -113,14 +113,14 @@ export function deviceConnected(deviceHwid: string): Promise<void> {
 
 export function createDeviceStateTemplate(deviceHwid: string): DeviceState {
 	// construct a new device state.
-	let deviceDetails: Device = {
+	const deviceDetails: Device = {
 		DeviceDescription: "",
 		DeviceHWID: deviceHwid,
 		DeviceID: 0,
 		DeviceName: "",
 		AccessType: "",
 	};
-	let createdState: DeviceState = {
+	const createdState: DeviceState = {
 		deviceDetails: deviceDetails,
 		deviceIsOnline: false,
 		deviceToggles: [],
@@ -143,7 +143,7 @@ export function updateDeviceState(deviceState: DeviceState): void {
 }
 
 export function mutateState(deviceHwid: string, mutator: (deviceState: DeviceState) => void): void {
-	let deviceState = getDeviceState(deviceHwid);
+	const deviceState = getDeviceState(deviceHwid);
 	if (deviceState) {
 		mutator(deviceState);
 	}
@@ -156,7 +156,7 @@ export function mutateState(deviceHwid: string, mutator: (deviceState: DeviceSta
 // here is some useful helper functions for the device state.
 
 export function markDeviceAsOffline(deviceHwid: string): void {
-	let deviceState = getDeviceState(deviceHwid);
+	const deviceState = getDeviceState(deviceHwid);
 	if (deviceState) {
 		deviceState.deviceIsOnline = false;
 	}
@@ -164,7 +164,7 @@ export function markDeviceAsOffline(deviceHwid: string): void {
 }
 
 export function markDeviceAsOnline(deviceHwid: string): void {
-	let deviceState = getDeviceState(deviceHwid);
+	const deviceState = getDeviceState(deviceHwid);
 	if (deviceState) {
 		deviceState.deviceIsOnline = true;
 		deviceState.deviceLastUpdate = Date.now();

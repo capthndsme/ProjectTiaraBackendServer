@@ -5,7 +5,7 @@ import { server } from "../web/ExpressInstance";
 
 
 
-let _io = new Server(server, {
+const _io = new Server(server, {
         cors: {
             origin: "*",
         },

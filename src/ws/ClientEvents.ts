@@ -15,6 +15,7 @@ import { ToggleStateMutate } from "../types/ToggleStateMutate";
 import { DeviceBaseToggle } from "../types/DeviceBaseToggle";
 import { sendToggleToDevice } from "./DeviceEvents";
 import { findDeviceSocket, getDeviceSchedulerData } from "./DeviceSocketList";
+import { findDeviceStream } from "../rtmp/DeviceStreams";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -229,5 +230,23 @@ export function ClientEvents(socket: Socket): void {
 		removeAuthenticatedClientSocket(socket);
 		console.log("Unloading all listeners from socket.");
 		socket.removeAllListeners();
+	});
+
+	socket.on("StreamRequest", (data: any, callback) => {
+		if (!socket.data.authenticated) return;
+		const deviceStream = findDeviceStream(socket.data.subscribedDeviceHwid);
+		if (!deviceStream) {
+			callback({
+				success: false,
+				error: "Device is offline.",
+			});
+			return;
+		} else {
+			callback({
+				success: true,
+				streamId: deviceStream.streamId,
+			});
+
+		}
 	});
 }

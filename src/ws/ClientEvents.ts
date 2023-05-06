@@ -15,7 +15,7 @@ import { ToggleStateMutate } from "../types/ToggleStateMutate";
 import { DeviceBaseToggle } from "../types/DeviceBaseToggle";
 import { sendToggleToDevice } from "./DeviceEvents";
 import { findDeviceSocket, getDeviceSchedulerData } from "./DeviceSocketList";
-import { findDeviceStream } from "../rtmp/DeviceStreams";
+import { findDeviceStream, findOrRequestDeviceStream } from "../rtmp/DeviceStreams";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -231,20 +231,46 @@ export function ClientEvents(socket: Socket): void {
 		console.log("Unloading all listeners from socket.");
 		socket.removeAllListeners();
 	});
+	socket.on("AddTriggerDevice", (data: any, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("[WebSocketHost] AddTriggerDevice", data);
+		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
+		if (!device) {
+			return callback({
+				success: false,
+				error: "Device is offline.",
+			});
+		}
+		device.socket.timeout(30000).emit("AddTrigger", data, (error: boolean, res: any) => {
+			if (error) return callback({success: false, error: "Timeout"});
+			if (res && res.success) {
+				callback({
+					success: true,
+				});
+			} 
+		});
 
+	});
+	// This is a test function for latency testing.
+	socket.on("RapidLatencyTest", (data: any, callback) => {
+		callback();
+	})
 	socket.on("StreamRequest", (data: any, callback) => {
 		if (!socket.data.authenticated) return;
-		const deviceStream = findDeviceStream(socket.data.subscribedDeviceHwid);
+		console.log("StreamRequestFromClient", data);
+		const deviceStream = findOrRequestDeviceStream(socket.data.subscribedDeviceHwid);
 		if (!deviceStream) {
 			callback({
 				success: false,
-				error: "Device is offline.",
+				error: "Device is offline or connecting.",
 			});
 			return;
 		} else {
 			callback({
 				success: true,
-				streamId: deviceStream.streamId,
+				data: {
+					streamKey: deviceStream.streamId
+				}
 			});
 
 		}

@@ -7,6 +7,7 @@ import { sendStateToSubscribedClient } from "./ClientSocketList";
 import { deviceConnected, getDeviceState, markDeviceAsOffline, markDeviceAsOnline, mutateState, updateDeviceState } from "../components/DeviceStateCache";
 import { DeviceStateUpdate } from "../types/DeviceStateUpdate";
 import { DeviceBaseToggle } from "../types/DeviceBaseToggle";
+import { removeFromDeviceStreamList } from "../rtmp/DeviceStreams";
 
 export function DeviceEvents(socket: Socket): void {
 	console.log("[Debug] Device socket connected, start verification.");
@@ -50,7 +51,9 @@ export function DeviceEvents(socket: Socket): void {
 	socket.on("disconnect", () => {
 		console.log(`Device disconnected.`);
 		console.log(socket?.handshake?.query?.deviceHwid);
+		removeFromDeviceStreamList(socket.handshake.query.deviceHwid.toString());
 		removeFromDeviceSocketList(socket);
+
 		markDeviceAsOffline(socket.handshake.query.deviceHwid.toString());
 
 		socket.disconnect();

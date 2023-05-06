@@ -24,3 +24,5 @@ function loadRoutes(): void {
       });
    });
 } 
+
+export {express}

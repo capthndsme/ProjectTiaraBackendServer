@@ -95,3 +95,7 @@ export function sendToggleStateToClient( deviceHwid: string, toggleStateUpdate: 
       }
    });
 }
+
+export function findSubscribedClientSocket(deviceHwid: string): ClientSocket | undefined {
+   return _clientSockets.find((cs) => cs.currentSubscribedDeviceHwid === deviceHwid);
+}

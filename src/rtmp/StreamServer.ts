@@ -61,8 +61,8 @@ export function startStreamingServer() {
 		CheckDeviceSessionValidity(deviceID, deviceKey)
 			.then((DeviceCheckStatus) => {
 				if (DeviceCheckStatus.success) {
-					console.log(`[StreamServer Ingest Authenticator] Device ${deviceID} succeeded authentication.`);
-					addToDeviceStreamList(deviceID, id);
+					console.log(`[StreamServer Ingest Authenticator] Device ${deviceID} succeeded authentication with key ${deviceKey}.`);
+					 
 				} else {
 					const session = nms.getSession(id);
 					console.warn(
@@ -74,7 +74,7 @@ export function startStreamingServer() {
 			})
 			.catch((e) => {
 				console.warn(`[StreamServer Ingest Authenticator] Database failure, rejecting stream for hwid ${deviceID}...`);
-			});
+			}); 
 	});
    // prePlay event is not really working for transcoded streams, so we're not using it until the 
    // authors of NodeMediaServer fix it. Or maybe I am doing something wrong.

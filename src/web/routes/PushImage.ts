@@ -19,9 +19,21 @@ import { CheckDeviceSessionValidity } from "../../dbops/CheckDeviceSessionValidi
 import { findSubscribedClientSocket } from "../../ws/ClientSocketList";
 const upload = multer({ dest: os.tmpdir() });
 app.post("/v1/cameraPreviews/push", upload.single("file"), (req, res) => {
-   const { deviceHwid, deviceSession } = req.body;
+   if (req.headers.devicehwid === undefined || req.headers.devicesession === undefined) {
+      // Simple typecheck
+      res.status(400).json({
+         success: false,
+         message: "Missing parameters",
+      });
+      return;
+   }
+   console.log("Received image from device", req);
+   const deviceHwid = req.headers.devicehwid as string;
+   const deviceSession = req.headers.deviceSession as string;
    const file = req.file;
-   let savePath = `/root/ProjectTiaraBackendServer/preview_images/${deviceHwid}.jpg`;
+   const saveFN = `${deviceHwid}-${Date.now()}`
+   let savePath = `/root/ProjectTiaraBackendServer/preview_images/${saveFN}.jpg`;
+   let saveCopy = `/root/ProjectTiaraBackendServer/preview_images/${deviceHwid}.jpg`;
    if (file && deviceHwid && deviceSession) { 
       CheckDeviceSessionValidity(deviceHwid, deviceSession)
       .then((valid) => {
@@ -37,13 +49,17 @@ app.post("/v1/cameraPreviews/push", upload.single("file"), (req, res) => {
                      message: "Failed to save image",
                   });
                } else {
-                  findSubscribedClientSocket(deviceHwid)
-                  ?.socket
-                  .emit("CameraPreviewUpdated");
-                  res.status(200).json({
-                     success: true,
-                     message: "Image saved",
+                  fs.copyFile(savePath, saveCopy, (err: any) => {
+                     console.log("Copied file to", saveCopy);
+                     findSubscribedClientSocket(deviceHwid)
+                     ?.socket
+                     .emit("CameraPreviewUpdated", {saveFN: saveFN});
+                     res.status(200).json({
+                        success: true,
+                        message: "Image saved",
+                     });
                   });
+                  
                }
             });
          } else {

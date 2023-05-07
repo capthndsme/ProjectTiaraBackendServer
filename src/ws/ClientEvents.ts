@@ -16,6 +16,11 @@ import { DeviceBaseToggle } from "../types/DeviceBaseToggle";
 import { sendToggleToDevice } from "./DeviceEvents";
 import { findDeviceSocket, getDeviceSchedulerData } from "./DeviceSocketList";
 import { findDeviceStream, findOrRequestDeviceStream } from "../rtmp/DeviceStreams";
+import { ToggleResult } from "../types/ToggleResult";
+import { ToggleWithStatus } from "../types/ToggleWithStatus";
+import { ScheduledTask } from "../types/Scheduler";
+import { GetDeviceNotifications } from "../dbops/GetDeviceNotifications";
+import { NotificationEntity } from "../types/NotificationEntity";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -184,14 +189,15 @@ export function ClientEvents(socket: Socket): void {
 			toggleValue: data.toggleValue,
 			toggleType: null, // Not needed for live toggle updates
 			lastChanged: Date.now(),
+			
 		};
 		// A better idea might be introducing a new TypeScript type for updates
 		// which don't require all DeviceBaseToggle fields to be present.
 		sendToggleStateToClientExceptSelf(socket, socket.data.subscribedDeviceHwid, local); // We do not need to wait for other clients to ack.
 		// Uncomment this for debugging... (Sends the toggle state to the client that sent the toggle state)
 		//sendToggleStateToClient(socket.data.subscribedDeviceHwid, local)
-		sendToggleToDevice(socket.data.subscribedDeviceHwid, local).then((res) => {
-         if (res) {
+		sendToggleToDevice(socket.data.subscribedDeviceHwid, local).then((res: ToggleResult) => {
+         if (res.success) {
             mutateState(socket.data.subscribedDeviceHwid, (deviceState) => {
                console.log("Mutator", deviceState);
                for (let i = 0; i < deviceState.deviceToggles.length; i++) {
@@ -203,21 +209,26 @@ export function ClientEvents(socket: Socket): void {
                return deviceState;
             });
          } else {
-            const failed: DeviceBaseToggle = {
+            const failed: ToggleWithStatus = {
                toggleName: data.toggleName,
                toggleValue: !data.toggleValue, // Invert since failed.
 					toggleType: null, // We don't know the type of the toggle since it failed.
                lastChanged: Date.now(),
+					toggleResult: res
             };
             sendToggleStateToClientExceptSelf(socket, socket.data.subscribedDeviceHwid, failed);
 				
 				//sendToggleStateToClient(socket.data.subscribedDeviceHwid, failed) 
 				
          }
+			
 			callback({
 				toggleName: data.toggleName,
 				toggleValue: data.toggleValue,
-				toggleSuccess: res,
+				toggleResult: (res && typeof res !== "boolean")?res:{
+					success: false,
+					message: "Device message - Type verification failed."
+				},
 			});
          
          
@@ -231,7 +242,7 @@ export function ClientEvents(socket: Socket): void {
 		console.log("Unloading all listeners from socket.");
 		socket.removeAllListeners();
 	});
-	socket.on("AddTriggerDevice", (data: any, callback) => {
+	socket.on("AddTriggerDevice", (data: {myTrigger: ScheduledTask}, callback: any) => {
 		if (!socket.data.authenticated) return;
 		console.log("[WebSocketHost] AddTriggerDevice", data);
 		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
@@ -241,7 +252,7 @@ export function ClientEvents(socket: Socket): void {
 				error: "Device is offline.",
 			});
 		}
-		device.socket.timeout(30000).emit("AddTrigger", data, (error: boolean, res: any) => {
+		device.socket.timeout(30000).emit("AddTrigger", data.myTrigger, (error: boolean, res: any) => {
 			if (error) return callback({success: false, error: "Timeout"});
 			if (res && res.success) {
 				callback({
@@ -255,6 +266,19 @@ export function ClientEvents(socket: Socket): void {
 	socket.on("RapidLatencyTest", (data: any, callback) => {
 		callback();
 	})
+	socket.on("GetNotifications", (data: {limit?: number, page?: number}, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("[WebSocketHost] GetNotifications", data);
+		GetDeviceNotifications(socket.data.subscribedDeviceHwid, data.limit, data.page).
+		then((res: Array<NotificationEntity>) => {
+			console.log("notification request success")
+			callback({
+				success: true,
+				data: res
+			})
+		});
+		 
+	});
 	socket.on("StreamRequest", (data: any, callback) => {
 		if (!socket.data.authenticated) return;
 		console.log("StreamRequestFromClient", data);

@@ -1,11 +1,12 @@
 import { getConnection } from "../database/Connection";
 const dbConnection = getConnection();
-export function GetDeviceNotifications(DeviceID: string) {
+export function GetDeviceNotifications(DeviceID: string, limit: number = 50, offset: number = 0) {
 	return new Promise((resolve) => {
 		if (DeviceID) {
+			const query = "SELECT FROM PT_Notification_Table WHERE hwid = ? ORDER BY id DESC LIMIT ? OFFSET ?;"
 			dbConnection
 				.promise()
-				.query("SELECT * FROM PT_Notification_Table WHERE hwid = ?", [DeviceID])
+				.query(query, [DeviceID, limit, offset])
 				.then(([rows, fields]) => {
 					resolve(rows);
 				})

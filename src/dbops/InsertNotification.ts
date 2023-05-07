@@ -1,19 +1,22 @@
 import { getConnection } from "../database/Connection";
+import { NotificationEntity } from "../types/NotificationEntity";
+import { NotificationType } from "../types/NotificationType";
 import { NotificationTypes } from "../types/NotificationTypes";
 const dbConnection = getConnection();
-export function InsertNotification (DeviceID: string, Title: string, Message: string, Type: NotificationTypes) {
+export function InsertNotification (notification: NotificationEntity, hwid: string): Promise<boolean> {
    return new Promise((resolve, reject) => {
-      const query = `INSERT INTO PT_Notification_Table (timestamp, notification_type, notification_title, notification_content) VALUES (?, ?, ?, ?)`;
-      const timestamp = Date.now();
-      const type = Type;
-      const title = Title;
-      const content = Message;
-      dbConnection.promise().query(query, [timestamp, type, title, content])
+      const query = `INSERT INTO PT_Notification_Table (hwid,sentTimestamp, type, title, message) VALUES (?, ?, ?, ?, ?)`;
+      const timestamp = notification.sentTimestamp;
+      const type = notification.type;
+      const title = notification.title;
+      const content = notification.message;
+      dbConnection.promise().query(query, [hwid, timestamp, type, title, content])
          .then(result => {
-            resolve(result);
+            resolve(true);
          })
          .catch(e=>{
-            console.log("Saving notification failed");
+            console.log("Saving notification failed, error: ", e);
+            resolve(false);
          })
    });
 

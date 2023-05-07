@@ -23,10 +23,12 @@ export function findOrRequestDeviceStream(deviceHwid: string): DeviceStream | un
 	let deviceStream = findDeviceStream(deviceHwid);
 	if (deviceStream === undefined) {
 		// Request stream from device.
+		console.log("Non-existing stream for device, requesting stream from device.")
 		const generatedStreamKey = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-
-		findDeviceSocket(deviceHwid)
-			?.socket.timeout(20000)
+		const device = findDeviceSocket(deviceHwid);
+		if (device) {
+			findDeviceSocket(deviceHwid)
+			?.socket.timeout(7500)
 			.emit(
 				"CameraStreamRequest",
 				{
@@ -34,16 +36,30 @@ export function findOrRequestDeviceStream(deviceHwid: string): DeviceStream | un
 				},
 				(error, data: any) => {
                if (error) {
-                  _deviceLocks[deviceHwid] = false;
+						console.log("Error requesting stream from device.");
+                    _deviceLocks[deviceHwid] = false;
+						return undefined;
                }
 					if (data && data.success) {
                   _deviceLocks[deviceHwid] = false;
 						addToDeviceStreamList(deviceHwid, generatedStreamKey);
 						deviceStream = findDeviceStream(deviceHwid);
+						return undefined;
+					} else {
+						_deviceLocks[deviceHwid] = false;
+						console.log("Device did not send a stream request.");
+						return undefined;
 					}
 				}
 			);
+		} else {
+			console.log("Device is offline.");
+			_deviceLocks[deviceHwid] = false;
+			return undefined;
+		}
+		
 	} else {
+		console.log("Existing stream for device, returning stream.");
       _deviceLocks[deviceHwid] = false;
 		return deviceStream;
 	}
@@ -67,3 +83,4 @@ export function removeFromDeviceStreamList(deviceHwid: string): void {
 	_deviceStreams = _deviceStreams.filter((ds) => ds.deviceHwid !== deviceHwid);
 	_deviceLocks[deviceHwid] = false;
 }
+

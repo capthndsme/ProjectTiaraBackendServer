@@ -76,6 +76,7 @@ export function startStreamingServer() {
 				console.warn(`[StreamServer Ingest Authenticator] Database failure, rejecting stream for hwid ${deviceID}...`);
 			}); 
 	});
+ 
    // prePlay event is not really working for transcoded streams, so we're not using it until the 
    // authors of NodeMediaServer fix it. Or maybe I am doing something wrong.
    // 

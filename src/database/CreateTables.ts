@@ -44,13 +44,14 @@ export function CreateTables (dbConnection: mysql.Pool) {
         PRIMARY KEY (\`MetricID\`),
         FOREIGN KEY (\`DeviceID\`) REFERENCES Devices(\`DeviceID\`)
     );`
-
+    
     const PTNotifications = `CREATE TABLE IF NOT EXISTS \`PT_Notification_Table\` (
         \`id\` BIGINT NOT NULL AUTO_INCREMENT,
-        \`timestamp\` BIGINT NOT NULL,
-        \`notification_type\` VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
-        \`notification_title\` VARCHAR(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-        \`notification_content\` VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`hwid\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`sentTimestamp\` BIGINT NOT NULL,
+        \`type\` VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci,
+        \`title\` VARCHAR(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`message\` VARCHAR(2048) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         PRIMARY KEY (\`id\`)
      );`
      const PTWebPush = `CREATE TABLE IF NOT EXISTS \`PT_WebPush\` (

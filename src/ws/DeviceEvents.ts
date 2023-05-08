@@ -19,6 +19,7 @@ import { ToggleResult } from "../types/ToggleResult";
 import { NotificationEntity } from "../types/NotificationEntity";
 import { FirebaseNotificationHook } from "../components/FirebaseNotificationHook";
 import { InsertNotification } from "../dbops/InsertNotification";
+import { WriteMetric } from "../dbops/WriteMetric";
 
 export function DeviceEvents(socket: Socket): void {
 	console.log("[Debug] Device socket connected, start verification.");
@@ -30,6 +31,7 @@ export function DeviceEvents(socket: Socket): void {
 			if (res.success) {
 				console.log("[Debug] Device socket authenticated successfully.");
 				markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
+				socket.data.deviceNumber = res.deviceId
 				deviceConnected(socket.handshake.query.deviceHwid.toString()).then((res) => {
 					addToDeviceSocketList(socket.handshake.query.deviceHwid.toString(), socket);
 					socket.on("heartbeat", (data, callback) => {
@@ -43,8 +45,24 @@ export function DeviceEvents(socket: Socket): void {
 							console.log("our state: ", deviceState);
 							deviceState.deviceSensors = data.deviceSensors;
 							deviceState.deviceToggles = data.deviceToggles;
-
 							console.log("mutated: ", deviceState);
+							// This is a hacky way of writing the metric to the database.
+							WriteMetric(Date.now(),
+							"TEMP_COMBINED",
+							JSON.stringify({
+								"inside": {
+									temperature: deviceState.deviceSensors?.Thermometers?.Inside?.Temperature,
+									humidity: deviceState.deviceSensors?.Thermometers?.Inside?.Humidity
+								},
+								"outside": {
+									temperature: deviceState.deviceSensors?.Thermometers?.Outside?.Temperature,
+									humidity: deviceState.deviceSensors?.Thermometers?.Outside?.Humidity
+								},
+								"cpu": {
+									temperature: deviceState.deviceSensors?.Thermometers?.CPU?.Temperature,
+								}
+							}),
+							socket.data.deviceNumber);
 						});
 						markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
 						sendStateToSubscribedClient(
@@ -62,8 +80,19 @@ export function DeviceEvents(socket: Socket): void {
 			console.error("WebSocketHost DB failed.", e);
 			socket.disconnect();
 		});
+	
 	socket.on("DeadStreamEvent", () => {
+		socket.data.lastDeadStreamEvent = Date.now();
+		// Anti spam - 1 event per 10 seconds.
+		if (Date.now() - socket.data.lastDeadStreamEvent > 1000 * 10) { 
+			// 10 seconds have not passed since last event
+			// Additonally, return and extend the timer.
+			socket.data.lastDeadStreamEvent = Date.now();
+			return;
+		}
+
 		console.log("Stream died, invalidating device stream.");
+		
 		removeFromDeviceStreamList(socket.handshake.query.deviceHwid.toString());
 	});
 	socket.on("PushNotification", (data: NotificationEntity, callback) => {

@@ -160,6 +160,7 @@ export function markDeviceAsOffline(deviceHwid: string): void {
 	if (deviceState) {
 		deviceState.deviceIsOnline = false;
 	}
+ 
 	saveStateCache(deviceHwid, deviceState);
 }
 
@@ -168,6 +169,10 @@ export function markDeviceAsOnline(deviceHwid: string): void {
 	if (deviceState) {
 		deviceState.deviceIsOnline = true;
 		deviceState.deviceLastUpdate = Date.now();
+		saveStateCache(deviceHwid, deviceState);
+	
+	} else {
+		console.warn("Device state not found, cannot mark device as online.");
 	}
-	saveStateCache(deviceHwid, deviceState);
 }
+

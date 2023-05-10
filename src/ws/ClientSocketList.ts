@@ -83,6 +83,15 @@ export function sendToggleStateToClientExceptSelf(s: Socket, deviceHwid: string,
    });
 }
 
+export function broadcastMessageToHWID(deviceHwid: string, message: string, data?: any) {
+   console.log("Sending message to subscribed client.", message);
+   _clientSockets.forEach((cs) => {
+      if (cs.currentSubscribedDeviceHwid === deviceHwid) {
+         console.log("Client subscribed to this socket", deviceHwid);
+         cs.socket.emit(message, data);
+      }
+   });
+}
 
  
 
@@ -99,3 +108,5 @@ export function sendToggleStateToClient( deviceHwid: string, toggleStateUpdate: 
 export function findSubscribedClientSocket(deviceHwid: string): ClientSocket | undefined {
    return _clientSockets.find((cs) => cs.currentSubscribedDeviceHwid === deviceHwid);
 }
+
+ 

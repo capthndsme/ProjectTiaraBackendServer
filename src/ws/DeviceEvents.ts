@@ -29,9 +29,15 @@ export function DeviceEvents(socket: Socket): void {
 	)
 		.then((res) => {
 			if (res.success) {
+				/**
+				 * Our device sends a heartbeat every 30 seconds,
+				 * it means a metric is written to the database every 30 seconds.
+				 * Lets throttle it to every 5 minutes.
+				 */
+				socket.data.metricsThrottle = 0;
 				console.log("[Debug] Device socket authenticated successfully.");
 				markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
-				socket.data.deviceNumber = res.deviceId
+				socket.data.deviceNumber = res.deviceId;
 				deviceConnected(socket.handshake.query.deviceHwid.toString()).then((res) => {
 					addToDeviceSocketList(socket.handshake.query.deviceHwid.toString(), socket);
 					socket.on("heartbeat", (data, callback) => {
@@ -47,22 +53,33 @@ export function DeviceEvents(socket: Socket): void {
 							deviceState.deviceToggles = data.deviceToggles;
 							console.log("mutated: ", deviceState);
 							// This is a hacky way of writing the metric to the database.
-							WriteMetric(Date.now(),
-							"TEMP_COMBINED",
-							JSON.stringify({
-								"inside": {
-									temperature: deviceState.deviceSensors?.Thermometers?.Inside?.Temperature,
-									humidity: deviceState.deviceSensors?.Thermometers?.Inside?.Humidity
-								},
-								"outside": {
-									temperature: deviceState.deviceSensors?.Thermometers?.Outside?.Temperature,
-									humidity: deviceState.deviceSensors?.Thermometers?.Outside?.Humidity
-								},
-								"cpu": {
-									temperature: deviceState.deviceSensors?.Thermometers?.CPU?.Temperature,
-								}
-							}),
-							socket.data.deviceNumber);
+							// Check if our last metric write was more than 5 minutes ago.
+							if (Date.now() - socket.data.metricsThrottle > 1000 * 60 * 5) {
+												WriteMetric(
+									Date.now(),
+									"TEMP_COMBINED",
+									JSON.stringify({
+										inside: {
+											temperature: deviceState.deviceSensors?.Thermometers?.Inside?.Temperature,
+											humidity: deviceState.deviceSensors?.Thermometers?.Inside?.Humidity,
+										},
+										outside: {
+											temperature: deviceState.deviceSensors?.Thermometers?.Outside?.Temperature,
+											humidity: deviceState.deviceSensors?.Thermometers?.Outside?.Humidity,
+										},
+										cpu: {
+											temperature: deviceState.deviceSensors?.Thermometers?.CPU?.Temperature,
+										},
+									}),
+									socket.data.deviceNumber
+								).then(() => {
+									console.log("Wrote metric to database.");
+									socket.data.metricsThrottle = Date.now(); // Note the time of the last metric write.
+								});
+							} else {
+								console.log("Metric write throttled.", Date.now() - socket.data.metricsThrottle);
+							}
+				
 						});
 						markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
 						sendStateToSubscribedClient(
@@ -80,11 +97,11 @@ export function DeviceEvents(socket: Socket): void {
 			console.error("WebSocketHost DB failed.", e);
 			socket.disconnect();
 		});
-	
+
 	socket.on("DeadStreamEvent", () => {
 		socket.data.lastDeadStreamEvent = Date.now();
 		// Anti spam - 1 event per 10 seconds.
-		if (Date.now() - socket.data.lastDeadStreamEvent > 1000 * 10) { 
+		if (Date.now() - socket.data.lastDeadStreamEvent > 1000 * 10) {
 			// 10 seconds have not passed since last event
 			// Additonally, return and extend the timer.
 			socket.data.lastDeadStreamEvent = Date.now();
@@ -92,7 +109,7 @@ export function DeviceEvents(socket: Socket): void {
 		}
 
 		console.log("Stream died, invalidating device stream.");
-		
+
 		removeFromDeviceStreamList(socket.handshake.query.deviceHwid.toString());
 	});
 	socket.on("PushNotification", (data: NotificationEntity, callback) => {

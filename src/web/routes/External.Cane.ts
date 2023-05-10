@@ -1,5 +1,11 @@
 import { app } from "../ExpressInstance";
 
+
+/** 
+ * 
+ * Shared backend for my friend's smartcane project.
+ * 
+ */
 app.get("/smartcane/getcane/:id", getCane);
 app.post("/smartcane/postcane/:id", postCane);
 console.log("Registered external backend routes for smartcane.")

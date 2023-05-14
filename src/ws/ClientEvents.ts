@@ -6,6 +6,8 @@ import { GetOwnedDevices } from "../dbops/GetOwnedDevices";
 
 import {
 	addToAuthenticatedClientSocketList,
+	disconectAllClientsWithSession,
+	getSocketsList,
 	removeAuthenticatedClientSocket,
 	sendToggleStateToClientExceptSelf,
 	setClientSubscribedDeviceHwidSocket,
@@ -23,6 +25,16 @@ import { GetDeviceNotifications } from "../dbops/GetDeviceNotifications";
 import { NotificationEntity } from "../types/NotificationEntity";
 import { Stats, ThermometerStat } from "../types/Stats";
 import { GetStats } from "../dbops/GetStats";
+import { RemoveSession } from "../dbops/RemoveSession";
+import { GetSessions } from "../dbops/GetSessions";
+import { GetImagery } from "../dbops/GetImagery";
+import { ClearNotifications } from "../dbops/ClearNotifications";
+import { GetOrCreateInviteHash } from "../types/GetOrCreateInviteHash";
+import { GetInviteDetails } from "../dbops/GetInviteDetails";
+import { AcceptInvite } from "../dbops/AcceptInvite";
+import { GetDeviceMessages } from "../dbops/GetDeviceMessages";
+import { SendMessageToHWID } from "../dbops/SendMessageToHWID";
+import { GetAccountDetails } from "../dbops/GetAccountDetails";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -33,15 +45,20 @@ export function ClientEvents(socket: Socket): void {
 	socket.on("authenticate", (data, callback) => {
 		if (data.username && data.session) {
 			CheckSessionWithID(data.username, data.session).then((res) => {
-				if (res) {
-					console.log("[Debug] Client socket authenticated successfully.");
-					addToAuthenticatedClientSocketList(data.username, socket);
-					socket.data.username = data.username;
-					socket.data.authenticated = true;
-					callback({ success: true, accountId: res.accountId });
-					clearTimeout(authTimeout);
-					// Null the timeout so we don't accidentally disconnect the socket.
-					authTimeout = null;
+				if (res.success) {
+					GetAccountDetails(res.accountId).then((accountDetails) => {
+						console.log("[Debug] Client socket authenticated successfully.");
+						console.log(socket.handshake.headers["x-forwarded-for"]);
+						addToAuthenticatedClientSocketList(data.username, socket);
+						socket.data.username = data.username;
+						socket.data.session = data.session; // store for logout and revokations.
+						socket.data.authenticated = true;
+						callback({ success: true, accountId: res.accountId, accountDetails: accountDetails });
+						clearTimeout(authTimeout);
+						// Null the timeout so we don't accidentally disconnect the socket.
+						authTimeout = null;
+					});
+					
 				} else {
 					console.log("[Debug] Client socket authentication failed.");
 					callback({ success: false, error: "AUTH_FAIL" });
@@ -80,8 +97,9 @@ export function ClientEvents(socket: Socket): void {
 				if (res.status) {
 					console.log("[Debug] Client socket logged in successfully.");
 					socket.data.username = data.username;
-
-					CreateSession(res.accountId, data.username, socket.handshake.address).then((sessionHash) => {
+					// Typecast to string, because, for some reason, typedefs for this particular header is broken?
+					const ip = (socket.handshake.headers["x-forwarded-for"] as string) ?? socket.handshake.address;
+					CreateSession(res.accountId, data.username, ip).then((sessionHash) => {
 						callback({
 							success: true,
 							accountId: res.accountId,
@@ -179,14 +197,20 @@ export function ClientEvents(socket: Socket): void {
 			});
 	});
 
-	socket.on("ToggleStateMutate", (data: ToggleStateMutate, callback) => {
+	socket.on("ToggleStateMutate", (data: ToggleStateMutate, callback: (d: ToggleWithStatus) => void) => {
 		console.log("[WebSocketHost] ToggleStateMutate", data);
 		if (!socket.data.authenticated) return;
 		if (!findDeviceSocket(socket.data.subscribedDeviceHwid)) {
-			callback({
-				toggleSuccess: false,
-				toggleError: "Device is offline.",
-			});
+			const failState: ToggleWithStatus = {
+				toggleName: data.toggleName,
+				toggleValue: data.toggleValue,
+				toggleType: null,
+				toggleResult: {
+					success: false,
+					message: "Device is offline.",
+				}
+			}
+			callback(failState);
 			return;
 		}
 		console.log("[WebSocketHost] ToggleStateMutate", data);
@@ -229,6 +253,7 @@ export function ClientEvents(socket: Socket): void {
 			callback({
 				toggleName: data.toggleName,
 				toggleValue: data.toggleValue,
+				toggleType: null,
 				toggleResult:
 					res && typeof res !== "boolean"
 						? res
@@ -258,7 +283,7 @@ export function ClientEvents(socket: Socket): void {
 				limit?: number;
 				offset?: number;
 
-				getByPastDays?: number,
+				getByPastDays?: number;
 				getByParams?: {
 					byDay?: boolean;
 					byMonth?: boolean;
@@ -272,7 +297,14 @@ export function ClientEvents(socket: Socket): void {
 			// I don't know if this is a good idea, but it works.
 			if (!socket.data.authenticated) return;
 			console.log("[WebSocketHost] GetStats", data);
-			GetStats(socket.data.subscribedDeviceHwid, data.limit, data.offset, data.getByPastDays, data.getByParams, data.getByTimestamp).then((res) => {
+			GetStats(
+				socket.data.subscribedDeviceHwid,
+				data.limit,
+				data.offset,
+				data.getByPastDays,
+				data.getByParams,
+				data.getByTimestamp
+			).then((res) => {
 				// Pass-through
 				callback(res);
 			});
@@ -331,4 +363,159 @@ export function ClientEvents(socket: Socket): void {
 			});
 		}
 	});
+	socket.on("LogoutEvent", (data: { session: string; username: string }, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("[WebSocketHost] LogoutEvent", data);
+		// We don't need to check if the session is valid, since the client will be disconnected anyway.
+		// We can just remove the session from the database.
+		// We also don't need to check if the session is valid, since the client will be disconnected anyway.
+		// We can just remove the session from the database.
+		RemoveSession(data.session, data.username).then((res) => {
+			// Invalidate client sessions.
+			callback();
+			disconectAllClientsWithSession(data.session);
+		});
+	});
+
+	socket.on("GetImages", (data: never, callback) => {
+		// For now, no parameters.
+		if (!socket.data.authenticated) return;
+		console.log("[WebSocketHost] GetImages");
+		GetImagery(socket.data.subscribedDeviceHwid).then((res) => {
+ 
+			callback(res);
+		});
+	});
+
+	socket.on("GetSessions", (data: never, callback) => {
+		if (!socket.data.authenticated) return;
+		GetSessions(socket.data.username).then((res) => {
+			callback(res);
+		});
+	});
+	socket.on("InvalidateSession", (data: { session: string }, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("[WebSocketHost] InvalidateSession", data);
+		RemoveSession(data.session, socket.data.username).then((res) => {
+			disconectAllClientsWithSession(data.session);
+			callback(res);
+		});
+	
+	});
+	socket.on("ClearNotifications", (data: { notificationId?: number }, callback) => {
+		if (!socket.data.authenticated) return;
+		ClearNotifications(socket.data.subscribedDeviceHwid, data.notificationId).then((res) => {
+			callback(res);
+		});
+	});
+	socket.on("ManualPicture" , ()=> {
+		if (!socket.data.authenticated) return;
+		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
+		if (!device) {
+			return;
+		}
+		device.socket.volatile.emit("ManualPicture")
+	});
+
+	socket.on("InviteHashes", (data: never, callback) => {
+		if (!socket.data.authenticated) return;
+		GetOrCreateInviteHash(socket.data.subscribedDeviceHwid, socket.data.username).then((res) => {
+			callback({
+				success: true,
+				data: res,
+			});
+		})
+		.catch(e=> {
+			console.log(e)
+			callback({
+				success: false,
+				message: e
+			})
+		})
+	});
+	socket.on("ResolveInviteHash", (data: { hash: string }, callback) => {
+		GetInviteDetails(data.hash).then((res) => {
+			callback({
+				success: true,
+				data: res,
+			})
+		})
+		.catch(e=> {
+			console.log(e)
+			callback({
+				success: false,
+				message: "Invalid invite. Ask who invited you for a new invite."
+			})
+		})
+	});
+	socket.on("AcceptInvite", (data: { hash: string }, callback) => {
+		if (!socket.data.authenticated) return;
+		AcceptInvite( data.hash, socket.data.username).then((res) => {
+			callback({
+				success: res.success,
+				data: res,
+				message: res.message
+			});
+		})
+		.catch(e=> {
+			console.log(e)
+			callback({
+				success: false,
+				message: e
+			})
+		})
+	});
+	socket.on("MessagingGet", (data: { limit?: number; before?:number, after?:number }, callback) => {
+		if (!socket.data.authenticated) return;
+		GetDeviceMessages(socket.data.subscribedDeviceHwid, data.limit, data.before, data.after).then((res) => {
+			callback({
+				success: true,
+				data: res,
+			});
+		})
+		.catch(e=> {
+			console.log(e)
+			callback({
+				success: false,
+				message: e
+			})
+		})
+	});
+
+	socket.on("MessagingSend", (data: { message: string }, callback) => {
+		if (!socket.data.authenticated) return;
+
+		SendMessageToHWID(socket.data.subscribedDeviceHwid, socket.data.username, data.message)
+		.then((res) => {
+		/** 
+		 * Replicate the message to all other clients that 
+		 * subscribe to the same device.
+		 * but not our own.
+		*/
+
+		getSocketsList().forEach((cs) => {
+			if (cs.socket.data.subscribedDeviceHwid === socket.data.subscribedDeviceHwid &&
+				cs.socket.data.username !== socket.data.username) {
+				cs.socket.emit("MessagingReceive", {
+					message: data.message,
+					username: socket.data.username,
+					timestamp: Date.now(),
+				});
+			}
+		})
+		// Send a success message to the client.
+		callback({
+			success: true,
+			data: "success"
+		});
+		})
+		.catch(e=> {
+			console.log(e)
+			callback({
+				success: false,
+				message: "Message write failure."
+			})
+		});
+	});
+
 }

@@ -47,11 +47,11 @@ export function DeviceEvents(socket: Socket): void {
 					socket.on("SyncDeviceState", (data: DeviceState) => {
 						console.log("Device state broadcast received from hardware " + socket.handshake.query.deviceHwid.toString());
 						mutateState(socket.handshake.query.deviceHwid.toString(), (deviceState) => {
-							console.log("hardware state: ", data);
-							console.log("our state: ", deviceState);
+							//console.log("hardware state: ", data);
+							//console.log("our state: ", deviceState);
 							deviceState.deviceSensors = data.deviceSensors;
 							deviceState.deviceToggles = data.deviceToggles;
-							console.log("mutated: ", deviceState);
+							//console.log("mutated: ", deviceState);
 							// This is a hacky way of writing the metric to the database.
 							// Check if our last metric write was more than 5 minutes ago.
 							if (Date.now() - socket.data.metricsThrottle > 1000 * 60 * 5) {

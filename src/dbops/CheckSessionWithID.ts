@@ -13,10 +13,15 @@ export function CheckSessionWithID (Username:string, Session:string, noReject = 
                         });
                     } else {
                         // Has rows = sessin exists
-                        resolve({
-                            success: true,
-                            accountId: rows[0]["AccountID"]
-                        });
+                        // Mark session as active
+                        dbConnection.promise().execute("UPDATE Sessions SET LastActive = ? WHERE Username = ? AND Session = ?", [Date.now(), Username, Session])
+                        .then(() => {
+                            resolve({
+                                success: true,
+                                accountId: rows[0]["AccountID"]
+                            });
+                        })
+                      
                     }
                 } else {
                     resolve({

@@ -63,7 +63,7 @@ export function removeAuthenticatedClientSocket(socket: Socket) {
 }
 
 export function sendStateToSubscribedClient(deviceHwid: string, deviceState: DeviceStateUpdate) {
-   console.log("Sending state to subscribed client.", deviceState);
+  //console.log("Sending state to subscribed client.", deviceState);
    _clientSockets.forEach((cs) => {
       
       if (cs.currentSubscribedDeviceHwid === deviceHwid) {
@@ -110,3 +110,14 @@ export function findSubscribedClientSocket(deviceHwid: string): ClientSocket | u
 }
 
  
+export function disconectAllClientsWithSession(clientSession: string) {
+   _clientSockets.forEach((cs) => {
+      if (cs.socket.data.session === clientSession) {
+         console.log("This session matches the session we want to remove. Disconnecting.")
+         cs.socket.disconnect();
+      }
+   });
+}
+export function getSocketsList() {
+   return _clientSockets;
+}

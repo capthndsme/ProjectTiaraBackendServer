@@ -6,8 +6,14 @@ export function CreateSession (accountId: number, username: string, IP: string):
     return new Promise((resolve, reject) => {
         CreateSessionHash().then((hash) => {
             dbConnection.promise().execute(
-                "INSERT INTO Sessions (AccountID, Username, Session, IPAddress) VALUES (?, ?, ?, ?)",
-                [accountId, username, hash, IP]
+                "INSERT INTO Sessions (AccountID, LoginTime, LastActive, Username, Session, IPAddress) VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    accountId, 
+                    Date.now(),
+                    Date.now(),
+                    username,
+                    hash,
+                    IP]
             ).then(() => {
                 resolve(hash)
             })

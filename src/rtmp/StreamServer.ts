@@ -30,7 +30,8 @@ const STREAMER_CONFIG = {
 			{
 				app: "live",
 				hls: true,
-				hlsFlags: "[hls_time=2:hls_list_size=3:hls_flags=delete_segments]",
+ 
+				hlsFlags: "[hls_time=3:hls_list_size=5:hls_flags=delete_segments]",
 				hlsKeep: false, // to prevent hls file delete after end the stream
 				dash: true,
 				dashFlags: "[f=dash:window_size=3:extra_window_size=5]",
@@ -42,6 +43,29 @@ const STREAMER_CONFIG = {
 
 // I am not sure if we are going to export this, so we are going to keep it private for now.
  
+interface deviceStreamCallbacks {
+	deviceHwid: string;
+	callback: () => void;
+}
+let deviceStreamCallback: deviceStreamCallbacks[] = [];
+
+
+export function waitForDeviceToStream(deviceHwid: string): Promise<void> {
+	return new Promise((resolve) => {
+		const waitTimeout = setTimeout(() => {
+			console.log("Timeout waiting for device to stream.");
+			resolve();
+		}, 15000);
+
+		deviceStreamCallback.push({
+			deviceHwid: deviceHwid,
+			callback: () => {
+				clearTimeout(waitTimeout);
+				resolve();
+			}
+		})
+	});
+}
 
 export function startStreamingServer() {
 	const nms = new NodeMediaServer(STREAMER_CONFIG);
@@ -62,7 +86,11 @@ export function startStreamingServer() {
 			.then((DeviceCheckStatus) => {
 				if (DeviceCheckStatus.success) {
 					console.log(`[StreamServer Ingest Authenticator] Device ${deviceID} succeeded authentication with key ${deviceKey}.`);
-					 
+					deviceStreamCallback.forEach((callback) => {
+						if (callback.deviceHwid === deviceID) {
+							callback.callback();
+						}
+					});
 				} else {
 					const session = nms.getSession(id);
 					console.warn(

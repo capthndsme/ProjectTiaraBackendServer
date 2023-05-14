@@ -12,13 +12,15 @@ export function CreateTables(dbConnection: mysql.Pool) {
 	const SessionsTable = `CREATE TABLE IF NOT EXISTS \`Sessions\` (
         \`SessionID\` INT NOT NULL AUTO_INCREMENT,
         \`AccountID\` INT NOT NULL,
+        \`LoginTime\` LONG NOT NULL,
+        \`LastActive\` LONG NOT NULL,
         \`Username\` VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         \`Session\` CHAR(64) NOT NULL,
         \`IPAddress\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         PRIMARY KEY (\`SessionID\`),
         FOREIGN KEY (\`AccountID\`) REFERENCES Accounts(\`AccountID\`)
     );`;
-	const DevicesTable = `CREATE TABLE IF NOT EXISTS \`Devices\` (
+    const DevicesTable = `CREATE TABLE IF NOT EXISTS \`Devices\` (
         \`DeviceID\` INT NOT NULL AUTO_INCREMENT,
         \`AccountOwnerID\` INT NOT NULL,
         \`DeviceHWID\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -26,8 +28,9 @@ export function CreateTables(dbConnection: mysql.Pool) {
         \`DeviceDescription\` VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         \`DeviceToken\` CHAR(64) NOT NULL,
         PRIMARY KEY (\`DeviceID\`),
-        FOREIGN KEY (\`AccountOwnerID\`) REFERENCES Accounts(\`AccountID\`)
-    );`;
+        FOREIGN KEY (\`AccountOwnerID\`) REFERENCES Accounts(\`AccountID\`),
+        INDEX idx_devicehwid (\`DeviceHWID\`)
+        );`;
 	const DeviceSubAccessTable = `CREATE TABLE IF NOT EXISTS \`DevicesSubAccess\` (
         \`SubaccessID\` INT NOT NULL AUTO_INCREMENT,
         \`DeviceHWID\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
@@ -35,6 +38,15 @@ export function CreateTables(dbConnection: mysql.Pool) {
         PRIMARY KEY (\`SubaccessID\`),
         FOREIGN KEY (\`AccountAccessee\`) REFERENCES Accounts(\`AccountID\`)
     );`;
+	const DeviceSubAccessInvitesTable = `CREATE TABLE IF NOT EXISTS \`DevicesSubAccessInvites\` (
+        \`InviteID\` INT NOT NULL AUTO_INCREMENT,
+        \`DeviceHWID\` VARCHAR(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`OwnerID\` INT NOT NULL,
+        \`InviteToken\` VARCHAR(64) NOT NULL,
+        PRIMARY KEY (\`InviteID\`),
+        FOREIGN KEY (\`OwnerID\`) REFERENCES Accounts(\`AccountID\`)
+    );`;
+
 	const MetricsTable = `CREATE TABLE IF NOT EXISTS \`DeviceMetrics\` (
         \`MetricID\` INT NOT NULL AUTO_INCREMENT,
         \`Timestamp\` DOUBLE NOT NULL,
@@ -70,7 +82,7 @@ export function CreateTables(dbConnection: mysql.Pool) {
      );`;
 
 	// A table that stores snapshots of device camera.
-    const PTImageSnapshots = `CREATE TABLE IF NOT EXISTS \`PT_Image_Snapshots\` (
+	const PTImageSnapshots = `CREATE TABLE IF NOT EXISTS \`PT_Image_Snapshots\` (
         \`id\` BIGINT NOT NULL AUTO_INCREMENT,
         \`hwid\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         \`timestamp\` BIGINT NOT NULL,
@@ -78,6 +90,18 @@ export function CreateTables(dbConnection: mysql.Pool) {
         \`cdn\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
         PRIMARY KEY (\`id\`)
     );`;
+
+	// Device messaging table
+	const PTMessaging = `CREATE TABLE IF NOT EXISTS \`PT_Messaging\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+        \`timestamp\` BIGINT NOT NULL,
+        \`DeviceHWID\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`sender\` INT NOT NULL,
+        \`msgContent\` VARCHAR(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        PRIMARY KEY (\`id\`),
+        FOREIGN KEY (\`sender\`) REFERENCES Accounts(\`AccountID\`),
+        FOREIGN KEY (\`DeviceHWID\`) REFERENCES Devices(\`DeviceHWID\`)
+    )`;
 
 	const before = performance.now();
 	console.log("[Debug] Creating tables if doesn't exist...");
@@ -89,6 +113,8 @@ export function CreateTables(dbConnection: mysql.Pool) {
 	dbConnection.query(PTNotifications);
 	dbConnection.query(PTWebPush);
 	dbConnection.query(PTPersists);
+	dbConnection.query(DeviceSubAccessInvitesTable);
 	dbConnection.query(PTImageSnapshots);
+	dbConnection.query(PTMessaging);
 	console.log("[Debug] Tables created, %sms", (performance.now() - before).toFixed(2));
 }

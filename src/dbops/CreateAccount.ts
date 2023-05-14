@@ -2,8 +2,7 @@ import { getConnection } from "../database/Connection";
 import { Account } from "../types/Account";
 const dbConnection = getConnection();
 
-// We dont know what mysql2's return type is, so we use any
-export function CreateAccount (account: Account): Promise<any> {
+export function CreateAccount (account: Account): Promise<number>{
     return new Promise((resolve, reject) => {
         dbConnection.promise().execute(
             "INSERT INTO Accounts(Email, Username, Password, DisplayName, DisplayImage) Values (?, ?, ?, ?, ?)",
@@ -15,8 +14,11 @@ export function CreateAccount (account: Account): Promise<any> {
                 account.image
             ]
         )
-        .then((result) => {
-            resolve(result);
+        .then(([result]) => {
+
+            console.log("Create account trace:", result)
+            // @ts-ignore Result is ResultSetHeader, we can safely ignore this (TODO: Investigate why this is happening)
+            resolve(result.insertId)
         })
         .catch((e) => reject(e));
     });

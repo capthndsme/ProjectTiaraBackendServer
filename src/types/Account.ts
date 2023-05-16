@@ -5,3 +5,10 @@ export type Account = {
    name: string,
    image: string
 }
+export type AccountDetails = {
+   AccountID: number,
+   Email: string,
+   DisplayName: string,
+   DisplayImage: string
+   Username: string
+}

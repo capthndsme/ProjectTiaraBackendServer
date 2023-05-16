@@ -34,7 +34,7 @@ import { GetInviteDetails } from "../dbops/GetInviteDetails";
 import { AcceptInvite } from "../dbops/AcceptInvite";
 import { GetDeviceMessages } from "../dbops/GetDeviceMessages";
 import { SendMessageToHWID } from "../dbops/SendMessageToHWID";
-import { GetAccountDetails } from "../dbops/GetAccountDetails";
+import { GetAccountDetails, GetAccountDetailsUsername } from "../dbops/GetAccountDetails";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -58,7 +58,6 @@ export function ClientEvents(socket: Socket): void {
 						// Null the timeout so we don't accidentally disconnect the socket.
 						authTimeout = null;
 					});
-					
 				} else {
 					console.log("[Debug] Client socket authentication failed.");
 					callback({ success: false, error: "AUTH_FAIL" });
@@ -208,8 +207,8 @@ export function ClientEvents(socket: Socket): void {
 				toggleResult: {
 					success: false,
 					message: "Device is offline.",
-				}
-			}
+				},
+			};
 			callback(failState);
 			return;
 		}
@@ -382,7 +381,6 @@ export function ClientEvents(socket: Socket): void {
 		if (!socket.data.authenticated) return;
 		console.log("[WebSocketHost] GetImages");
 		GetImagery(socket.data.subscribedDeviceHwid).then((res) => {
- 
 			callback(res);
 		});
 	});
@@ -400,7 +398,6 @@ export function ClientEvents(socket: Socket): void {
 			disconectAllClientsWithSession(data.session);
 			callback(res);
 		});
-	
 	});
 	socket.on("ClearNotifications", (data: { notificationId?: number }, callback) => {
 		if (!socket.data.authenticated) return;
@@ -408,114 +405,126 @@ export function ClientEvents(socket: Socket): void {
 			callback(res);
 		});
 	});
-	socket.on("ManualPicture" , ()=> {
+	socket.on("ManualPicture", () => {
 		if (!socket.data.authenticated) return;
 		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
 		if (!device) {
 			return;
 		}
-		device.socket.volatile.emit("ManualPicture")
+		device.socket.volatile.emit("ManualPicture");
 	});
 
 	socket.on("InviteHashes", (data: never, callback) => {
 		if (!socket.data.authenticated) return;
-		GetOrCreateInviteHash(socket.data.subscribedDeviceHwid, socket.data.username).then((res) => {
-			callback({
-				success: true,
-				data: res,
-			});
-		})
-		.catch(e=> {
-			console.log(e)
-			callback({
-				success: false,
-				message: e
+		GetOrCreateInviteHash(socket.data.subscribedDeviceHwid, socket.data.username)
+			.then((res) => {
+				callback({
+					success: true,
+					data: res,
+				});
 			})
-		})
+			.catch((e) => {
+				console.log(e);
+				callback({
+					success: false,
+					message: e,
+				});
+			});
 	});
 	socket.on("ResolveInviteHash", (data: { hash: string }, callback) => {
-		GetInviteDetails(data.hash).then((res) => {
-			callback({
-				success: true,
-				data: res,
+		GetInviteDetails(data.hash)
+			.then((res) => {
+				callback({
+					success: true,
+					data: res,
+				});
 			})
-		})
-		.catch(e=> {
-			console.log(e)
-			callback({
-				success: false,
-				message: "Invalid invite. Ask who invited you for a new invite."
-			})
-		})
+			.catch((e) => {
+				console.log(e);
+				callback({
+					success: false,
+					message: "Invalid invite. Ask who invited you for a new invite.",
+				});
+			});
 	});
 	socket.on("AcceptInvite", (data: { hash: string }, callback) => {
 		if (!socket.data.authenticated) return;
-		AcceptInvite( data.hash, socket.data.username).then((res) => {
-			callback({
-				success: res.success,
-				data: res,
-				message: res.message
-			});
-		})
-		.catch(e=> {
-			console.log(e)
-			callback({
-				success: false,
-				message: e
+		AcceptInvite(data.hash, socket.data.username)
+			.then((res) => {
+				callback({
+					success: res.success,
+					data: res,
+					message: res.message,
+				});
 			})
-		})
+			.catch((e) => {
+				console.log(e);
+				callback({
+					success: false,
+					message: e,
+				});
+			});
 	});
-	socket.on("MessagingGet", (data: { limit?: number; before?:number, after?:number }, callback) => {
+	socket.on("MessagingGet", (data: { limit?: number; before?: number; after?: number }, callback) => {
 		if (!socket.data.authenticated) return;
-		GetDeviceMessages(socket.data.subscribedDeviceHwid, data.limit, data.before, data.after).then((res) => {
-			callback({
-				success: true,
-				data: res,
-			});
-		})
-		.catch(e=> {
-			console.log(e)
-			callback({
-				success: false,
-				message: e
+		GetDeviceMessages(socket.data.subscribedDeviceHwid, data.limit, data.before, data.after)
+			.then((res) => {
+				callback({
+					success: true,
+					data: res,
+				});
 			})
-		})
+			.catch((e) => {
+				console.log(e);
+				callback({
+					success: false,
+					message: e,
+				});
+			});
 	});
 
 	socket.on("MessagingSend", (data: { message: string }, callback) => {
 		if (!socket.data.authenticated) return;
 
 		SendMessageToHWID(socket.data.subscribedDeviceHwid, socket.data.username, data.message)
-		.then((res) => {
-		/** 
-		 * Replicate the message to all other clients that 
-		 * subscribe to the same device.
-		 * but not our own.
-		*/
+			.then((res) => {
+				/**
+				 * Replicate the message to all other clients that
+				 * subscribe to the same device.
+				 * but not our own.
+				 */
 
-		getSocketsList().forEach((cs) => {
-			if (cs.socket.data.subscribedDeviceHwid === socket.data.subscribedDeviceHwid &&
-				cs.socket.data.username !== socket.data.username) {
-				cs.socket.emit("MessagingReceive", {
-					message: data.message,
-					username: socket.data.username,
-					timestamp: Date.now(),
+				getSocketsList().forEach((cs) => {
+					GetAccountDetailsUsername(socket.data.username).then((rez) => {
+						if (
+							cs.socket.data.subscribedDeviceHwid === socket.data.subscribedDeviceHwid &&
+							cs.socket.data.username !== socket.data.username
+						) {
+							const msgLocal: Message = {
+								msgContent: data.message,
+								timestamp: Date.now(),
+								Username: socket.data.username,
+								messageID: res,
+								DisplayImage: rez.DisplayImage,
+								sender: rez.AccountID,
+								DeviceHWID: socket.data.subscribedDeviceHwid,
+							};
+							cs.socket.emit("MessagingReceive",msgLocal);
+						}
+					});
 				});
-			}
-		})
-		// Send a success message to the client.
-		callback({
-			success: true,
-			data: "success"
-		});
-		})
-		.catch(e=> {
-			console.log(e)
-			callback({
-				success: false,
-				message: "Message write failure."
+				// Send a success message to the client.
+				callback({
+					success: true,
+					data: "success",
+				});
 			})
-		});
+			.catch((e) => {
+				console.log(e);
+				callback({
+					success: false,
+					message: "Message write failure.",
+				});
+			});
 	});
-
 }

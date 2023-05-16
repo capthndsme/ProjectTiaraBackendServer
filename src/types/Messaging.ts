@@ -2,8 +2,8 @@
 interface Message {
    messageID: number;
    sender: number;
-   recipient: number;
-   message: string;
+ 
+   msgContent: string;
    timestamp: number; 
    DeviceHWID: string;
    Username: string;

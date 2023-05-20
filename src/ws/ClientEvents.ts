@@ -208,6 +208,7 @@ export function ClientEvents(socket: Socket): void {
 					success: false,
 					message: "Device is offline.",
 				},
+				
 			};
 			callback(failState);
 			return;

@@ -7,7 +7,7 @@ import { server } from "../web/ExpressInstance";
 
 const _io = new Server(server, {
         cors: {
-            origin: "*",
+            origin: "*", // TODO: Change this to the actual origin
         },
 });
 

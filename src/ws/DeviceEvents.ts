@@ -3,7 +3,7 @@ import { CheckDeviceSessionValidity } from "../dbops/CheckDeviceSessionValidity"
 import { addToDeviceSocketList, findDeviceSocket } from "./DeviceSocketList";
 import { removeFromDeviceSocketList } from "./DeviceSocketList";
 import { DeviceState } from "../types/DeviceState";
-import { sendStateToSubscribedClient } from "./ClientSocketList";
+import { getSocketsList, sendStateToSubscribedClient } from "./ClientSocketList";
 import {
 	deviceConnected,
 	getDeviceState,
@@ -36,6 +36,12 @@ export function DeviceEvents(socket: Socket): void {
 				 */
 				socket.data.metricsThrottle = 0;
 				console.log("[Debug] Device socket authenticated successfully.");
+				const cs = getSocketsList();
+				cs.forEach((c) => {
+					if (c.currentSubscribedDeviceHwid.includes(socket.handshake.query.deviceHwid.toString())) {
+						c.socket.volatile.emit("DeviceOn"); // Simple notification to the client that the device is offline.
+					}
+				});
 				markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
 				socket.data.deviceNumber = res.deviceId;
 				deviceConnected(socket.handshake.query.deviceHwid.toString()).then((res) => {
@@ -55,7 +61,7 @@ export function DeviceEvents(socket: Socket): void {
 							// This is a hacky way of writing the metric to the database.
 							// Check if our last metric write was more than 5 minutes ago.
 							if (Date.now() - socket.data.metricsThrottle > 1000 * 60 * 5) {
-												WriteMetric(
+								WriteMetric(
 									Date.now(),
 									"TEMP_COMBINED",
 									JSON.stringify({
@@ -79,9 +85,9 @@ export function DeviceEvents(socket: Socket): void {
 							} else {
 								console.log("Metric write throttled.", Date.now() - socket.data.metricsThrottle);
 							}
-				
 						});
 						markDeviceAsOnline(socket.handshake.query.deviceHwid.toString());
+
 						sendStateToSubscribedClient(
 							socket.handshake.query.deviceHwid.toString(),
 							getDeviceState(socket.handshake.query.deviceHwid.toString())
@@ -118,6 +124,15 @@ export function DeviceEvents(socket: Socket): void {
 			// Push it to Firebase using our FirebaseNotificationHook component.
 			// which is still TODO. But it won't error out.
 			FirebaseNotificationHook(data);
+			// Find clients subscribed to this device.
+			const cs = getSocketsList();
+			cs.forEach((c) => {
+				if (c.currentSubscribedDeviceHwid.includes(socket.handshake.query.deviceHwid.toString())) {
+					console.log("Push notification: Replicating to client:", c.socket.id, "device:", socket.handshake.query.deviceHwid.toString(),data);
+					c.socket.emit("Notification", data); // Simple notification to the client that the device is offline.
+				}
+			});
+			// Save it to the database.
 			InsertNotification(data, socket.handshake.query.deviceHwid.toString()).then((state) => {
 				console.log("Notification saved to database state", state);
 
@@ -133,11 +148,19 @@ export function DeviceEvents(socket: Socket): void {
 	});
 	socket.on("disconnect", () => {
 		console.log(`Device disconnected.`);
-		console.log(socket?.handshake?.query?.deviceHwid);
+		const weHaveHwid = socket?.handshake?.query?.deviceHwid;
+		console.log(weHaveHwid);
 		removeFromDeviceStreamList(socket.handshake.query.deviceHwid.toString());
 		removeFromDeviceSocketList(socket);
 
 		markDeviceAsOffline(socket.handshake.query.deviceHwid.toString());
+		// find any clients that are subscribed to this device and notify them.
+		const cs = getSocketsList();
+		cs.forEach((c) => {
+			if (c.currentSubscribedDeviceHwid.includes(socket.handshake.query.deviceHwid.toString())) {
+				c.socket.volatile.emit("DeviceOff"); // Simple notification to the client that the device is offline.
+			}
+		});
 
 		socket.disconnect();
 	});

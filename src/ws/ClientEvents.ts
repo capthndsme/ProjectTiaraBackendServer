@@ -29,12 +29,15 @@ import { RemoveSession } from "../dbops/RemoveSession";
 import { GetSessions } from "../dbops/GetSessions";
 import { GetImagery } from "../dbops/GetImagery";
 import { ClearNotifications } from "../dbops/ClearNotifications";
-import { GetOrCreateInviteHash } from "../types/GetOrCreateInviteHash";
+import { GetOrCreateInviteHash, InvalidateHash } from "../types/GetOrCreateInviteHash";
 import { GetInviteDetails } from "../dbops/GetInviteDetails";
 import { AcceptInvite } from "../dbops/AcceptInvite";
 import { GetDeviceMessages } from "../dbops/GetDeviceMessages";
 import { SendMessageToHWID } from "../dbops/SendMessageToHWID";
 import { GetAccountDetails, GetAccountDetailsUsername } from "../dbops/GetAccountDetails";
+import { UpdateDevice } from "../dbops/UpdateDevice";
+import { writeAuditEntry } from "../dbops/WriteAuditEntry";
+import { GetAudits } from "../dbops/GetAudits";
 export function ClientEvents(socket: Socket): void {
 	function authDisconnect() {
 		console.log("[Debug] Client socket authentication timed-out.");
@@ -208,7 +211,6 @@ export function ClientEvents(socket: Socket): void {
 					success: false,
 					message: "Device is offline.",
 				},
-				
 			};
 			callback(failState);
 			return;
@@ -223,11 +225,22 @@ export function ClientEvents(socket: Socket): void {
 		};
 		// A better idea might be introducing a new TypeScript type for updates
 		// which don't require all DeviceBaseToggle fields to be present.
+
 		sendToggleStateToClientExceptSelf(socket, socket.data.subscribedDeviceHwid, local); // We do not need to wait for other clients to ack.
 		// Uncomment this for debugging... (Sends the toggle state to the client that sent the toggle state)
 		//sendToggleStateToClient(socket.data.subscribedDeviceHwid, local)
+
 		sendToggleToDevice(socket.data.subscribedDeviceHwid, local).then((res: ToggleResult) => {
 			if (res.success) {
+				// write success audit log entry
+				writeAuditEntry(
+					socket.data.subscribedDeviceHwid,
+					socket.data.username,
+					socket.data.username + " selected " + data.toggleName,
+					socket.data.username + " selected " + data.toggleName + " successfully and it has finished"
+				);
+
+				// mutate state
 				mutateState(socket.data.subscribedDeviceHwid, (deviceState) => {
 					console.log("Mutator", deviceState);
 					for (let i = 0; i < deviceState.deviceToggles.length; i++) {
@@ -238,6 +251,13 @@ export function ClientEvents(socket: Socket): void {
 					}
 				});
 			} else {
+				// write failed audit log entry
+				writeAuditEntry(
+					socket.data.subscribedDeviceHwid,
+					socket.data.username,
+					socket.data.username + " selected " + data.toggleName,
+					socket.data.username + " selected " + data.toggleName + ", but it has failed with error: " + res.message??"Unknown error"
+				);
 				const failed: ToggleWithStatus = {
 					toggleName: data.toggleName,
 					toggleValue: !data.toggleValue, // Invert since failed.
@@ -275,7 +295,7 @@ export function ClientEvents(socket: Socket): void {
 	socket.on("GetParticularSchedule", (data: { scheduleId: string }, callback: any) => {
 		if (!socket.data.authenticated) return;
 	});
-
+	
 	socket.on(
 		"GetStats",
 		(
@@ -415,6 +435,12 @@ export function ClientEvents(socket: Socket): void {
 		device.socket.volatile.emit("ManualPicture");
 	});
 
+	socket.on("GetAuditLog", (data: never, callback) => {
+		if (!socket.data.authenticated) return;
+		GetAudits(socket.data.subscribedDeviceHwid).then((res) => {
+			callback(res);
+		});
+	})
 	socket.on("InviteHashes", (data: never, callback) => {
 		if (!socket.data.authenticated) return;
 		GetOrCreateInviteHash(socket.data.subscribedDeviceHwid, socket.data.username)
@@ -510,7 +536,7 @@ export function ClientEvents(socket: Socket): void {
 								sender: rez.AccountID,
 								DeviceHWID: socket.data.subscribedDeviceHwid,
 							};
-							cs.socket.emit("MessagingReceive",msgLocal);
+							cs.socket.emit("MessagingReceive", msgLocal);
 						}
 					});
 				});
@@ -527,5 +553,63 @@ export function ClientEvents(socket: Socket): void {
 					message: "Message write failure.",
 				});
 			});
+	});
+
+	socket.on("RebootSubscribedDevice", (data: { hard?: boolean }, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("Got reboot request", data);
+		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
+		if (!device) {
+			return;
+		}
+		device.socket.volatile.emit("Reboot", data, () => {
+			if (callback) callback();
+		});
+	});
+
+	socket.on("RemoveTrigger", (data: ScheduledTask, callback) => {
+		if (!socket.data.authenticated) return;
+		console.log("Got remove trigger request", data);
+		const device = findDeviceSocket(socket.data.subscribedDeviceHwid);
+		if (!device) {
+			return;
+		}
+		device.socket.volatile.emit("RemoveTrigger", data, () => {
+			if (callback) callback();
+		});
+	});
+	socket.on("DismissNotification", (data: { id: number }, callback) => {
+		if (!socket.data.authenticated) return;
+		ClearNotifications(socket.data.subscribedDeviceHwid, data.id).then((res) => {
+			if (callback) callback();
+		});
+	});
+
+	socket.on("RevokeInviteHash", (data: never, callback) => {
+		if (!socket.data.authenticated) return;
+		InvalidateHash(socket.data.subscribedDeviceHwid, socket.data.username)
+			.then((res) => {
+				// return new hash
+				GetOrCreateInviteHash(socket.data.subscribedDeviceHwid, socket.data.username).then((res) => {
+					if (callback)
+						callback({
+							success: true,
+							data: res,
+						});
+				});
+			})
+			.catch((e) => {
+				console.log(e);
+				if (callback)
+					callback({
+						success: false,
+						message: e,
+					});
+			});
+	});
+	socket.on("UpdateSubscribedDevice", (data: { DeviceName: string; DeviceDescription: string }, callback) => {
+		UpdateDevice(socket.data.subscribedDeviceHwid, data.DeviceName, data.DeviceDescription).then((res) => {
+			if (callback) callback();
+		});
 	});
 }

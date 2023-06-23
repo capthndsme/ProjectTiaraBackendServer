@@ -49,4 +49,29 @@ export function GetOrCreateInviteHash(DeviceHWID: string, Username: string): Pro
 }
 
 
- 
+
+export function InvalidateHash(DeviceHWID: string, Username: string) {
+   return new Promise((resolve, reject) => {
+      dbConnection
+         .promise()
+         .execute("SELECT * FROM Devices WHERE AccountOwnerID = (SELECT AccountID FROM Accounts WHERE Username = ?) AND DeviceHWID = ? ", [
+            Username,
+            DeviceHWID,
+         ])
+         .then(([rows, fields]) => {
+            if (Array.isArray(rows)) {
+               if (rows.length === 0) {
+                  // It is not the owner of the device, reject the request.
+                  reject("Not the owner of the device.");
+               } else {
+                  dbConnection
+                  .promise()
+                  .execute("DELETE FROM DevicesSubAccessInvites WHERE DeviceHWID = ?", [DeviceHWID])
+                  .then(([rows, fields]) => {
+                     resolve(true)
+                  });
+               }
+            }
+         });
+   });
+}

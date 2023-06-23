@@ -102,7 +102,16 @@ export function CreateTables(dbConnection: mysql.Pool) {
         FOREIGN KEY (\`sender\`) REFERENCES Accounts(\`AccountID\`),
         FOREIGN KEY (\`DeviceHWID\`) REFERENCES Devices(\`DeviceHWID\`)
     )`;
-
+    const PTAuditLog = `CREATE TABLE IF NOT EXISTS \`PT_Audit_Log\` (
+        \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+        \`timestamp\` BIGINT NOT NULL,
+        \`DeviceHWID\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`action\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`actionData\` VARCHAR(4096) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        \`actorUsername\` VARCHAR(256) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+        PRIMARY KEY (\`id\`),
+        FOREIGN KEY (\`DeviceHWID\`) REFERENCES Devices(\`DeviceHWID\`)
+    )`;
 	const before = performance.now();
 	console.log("[Debug] Creating tables if doesn't exist...");
 	dbConnection.query(AccountsTable);
@@ -116,5 +125,6 @@ export function CreateTables(dbConnection: mysql.Pool) {
 	dbConnection.query(DeviceSubAccessInvitesTable);
 	dbConnection.query(PTImageSnapshots);
 	dbConnection.query(PTMessaging);
+	dbConnection.query(PTAuditLog);
 	console.log("[Debug] Tables created, %sms", (performance.now() - before).toFixed(2));
 }
